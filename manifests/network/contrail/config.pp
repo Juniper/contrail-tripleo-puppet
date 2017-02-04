@@ -341,6 +341,8 @@ class tripleo::network::contrail::config(
       },
       device_manager_config   => {
         'DEFAULTS' => {
+          'api_server_ip'         => $api_server,
+          'api_server_port'       => $api_port,
           'cassandra_server_list' => $cassandra_server_list_9160,
           'disc_server_ip'        => $disc_server_ip,
           'disc_server_port'      => $disc_server_port,
@@ -360,6 +362,8 @@ class tripleo::network::contrail::config(
       keystone_config         => $keystone_config,
       schema_config           => {
         'DEFAULTS' => {
+          'api_server_ip'         => $api_server,
+          'api_server_port'       => $api_port,
           'cassandra_server_list' => $cassandra_server_list_9160,
           'disc_server_ip'        => $disc_server_ip,
           'disc_server_port'      => $disc_server_port,
@@ -375,6 +379,8 @@ class tripleo::network::contrail::config(
       },
       svc_monitor_config      => {
         'DEFAULTS' => {
+          'api_server_ip'         => $api_server,
+          'api_server_port'       => $api_port,
           'cassandra_server_list' => $cassandra_server_list_9160,
           'disc_server_ip'        => $disc_server_ip,
           'disc_server_port'      => $disc_server_port,
