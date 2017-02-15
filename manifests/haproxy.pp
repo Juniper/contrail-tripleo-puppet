@@ -311,6 +311,7 @@ class tripleo::haproxy (
   $haproxy_stats_user        = 'admin',
   $haproxy_stats_password    = undef,
   $contrail_config_hosts     = hiera('contrail_config_node_ips'),
+  $contrail_analytics_hosts  = hiera('contrail_analytics_node_ips'),
   $contrail_config_hosts_names     = hiera('contrail_config_node_names', undef),
   $controller_hosts          = hiera('controller_node_ips'),
   $controller_hosts_names    = hiera('controller_node_names', undef),
@@ -367,6 +368,8 @@ class tripleo::haproxy (
     contrail_discovery_port => 5998,
     contrail_discovery_ssl_port => 15998,
     contrail_analytics_port => 8090,
+    contrail_analytics_rest_port => 8081,
+    contrail_analytics_ssl_rest_port => 18081,
     contrail_analytics_ssl_port => 18090,
     contrail_webui_http_port => 8080,
     contrail_webui_https_port => 8143,
@@ -621,9 +624,20 @@ class tripleo::haproxy (
       public_virtual_ip => $public_virtual_ip,
       internal_ip       => hiera('contrail_analytics_vip', $controller_virtual_ip),
       service_port      => $ports[contrail_analytics_port],
-      ip_addresses      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
-      server_names      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
+      ip_addresses      => hiera('contrail_analytics_node_ips', $contrail_analytics_node_ips),
+      server_names      => hiera('contrail_analytics_node_ips', $contrail_analytics_node_ips),
       public_ssl_port   => $ports[contrail_analytics_ssl_port],
+    }
+  }
+
+ if $contrail_config {
+    ::tripleo::haproxy::endpoint { 'contrail_analytics_rest':
+      public_virtual_ip => $public_virtual_ip,
+      internal_ip       => hiera('contrail_analytics_vip', $controller_virtual_ip),
+      service_port      => $ports[contrail_analytics_rest_port],
+      ip_addresses      => hiera('contrail_analytics_node_ips', $contrail_analytics_node_ips),
+      server_names      => hiera('contrail_analytics_node_ips', $contrail_analytics_node_ips),
+      public_ssl_port   => $ports[contrail_analytics_ssl_rest_port],
     }
   }
 
