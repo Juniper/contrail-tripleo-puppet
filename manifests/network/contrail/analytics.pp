@@ -354,6 +354,7 @@ class tripleo::network::contrail::analytics(
           'disc_server_ip'   => $disc_server_ip,
           'disc_server_port' => $disc_server_port,
         },
+        'KEYSTONE'  => $keystone_config,
       },
       redis_config             => $redis_config,
       topology_config          => {
