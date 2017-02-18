@@ -142,6 +142,11 @@
 #  String value.
 #  Defaults to hiera('contrail::vrouter::is_tsn',false)
 #
+# [*is_dpdk*]
+#  (optional) Turns vrouter into DPDK Compute Node
+#  String value.
+#  Defaults to hiera('contrail::vrouter::is_dpdk',false)
+#
 class tripleo::network::contrail::vrouter (
   $step               = hiera('step'),
   $admin_password     = hiera('contrail::admin_password'),
@@ -168,6 +173,7 @@ class tripleo::network::contrail::vrouter (
   $physical_interface = hiera('contrail::vrouter::physical_interface'),
   $public_vip         = hiera('public_virtual_ip'),
   $is_tsn             = hiera('contrail::vrouter::is_tsn',false),
+  $is_dpdk            = hiera('contrail::vrouter::is_dpdk',false),
 ) {
     $cidr = netmask_to_cidr($netmask)
     notify { 'cidr':
