@@ -641,15 +641,29 @@ class tripleo::haproxy (
     }
   }
 
- if $contrail_config {
-    ::tripleo::haproxy::endpoint { 'contrail_webui_http':
-      public_virtual_ip => $public_virtual_ip,
-      internal_ip       => hiera('contrail_webui_vip', $controller_virtual_ip),
-      service_port      => $ports[contrail_webui_http_port],
-      ip_addresses      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
-      server_names      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
-      public_ssl_port   => $ports[contrail_webui_http_port],
-    }
+  $internal_ip = hiera('contrail_webui_vip', $controller_virtual_ip)
+
+  $contrail_webui_http_bind_opts = {
+    "${internal_ip}:8080" => $haproxy_listen_bind_param,
+    "${public_virtual_ip}:8080" => $haproxy_listen_bind_param,
+  }
+  $contrail_webui_http_options = {
+    'cookie' => 'SERVERID insert indirect nocache',
+    'option' => 'forwardfor',
+  }
+
+  haproxy::listen { 'contrail_webui_http':
+    bind             => $contrail_webui_http_bind_opts,
+    options          => $contrail_webui_http_options,
+    mode             => 'http',
+    collect_exported => false,
+  }
+  haproxy::balancermember { 'contrail_webui_http':
+    listening_service => 'contrail_webui_http',
+    ports             => '8080',
+    ipaddresses       => hiera('contrail_config_node_ips', $controller_hosts_real),
+    server_names      => hiera('contrail_config_node_ips', $controller_hosts_names_real),
+    options           => union($haproxy_member_options, ["cookie ${::hostname}"]),
   }
 
  if $contrail_config {
