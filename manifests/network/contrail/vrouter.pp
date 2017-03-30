@@ -256,9 +256,6 @@ class tripleo::network::contrail::vrouter (
       $vrouter_agent_config = {
         'DEFAULT'  => {
           'platform'                   => 'dpdk',
-          'physical_interface_address' => '0000:00:00.0',
-          'physical_interface_address' => '0000:00:00.0',
-          'physical_interface_mac'     => $macaddress,
           'physical_uio_driver'        => 'igb_uio',
         },
         'CONTROL-NODE'  => {
