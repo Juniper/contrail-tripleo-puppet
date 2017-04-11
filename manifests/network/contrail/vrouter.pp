@@ -142,6 +142,11 @@
 #  String value.
 #  Defaults to hiera('contrail::vrouter::is_tsn',false)
 #
+# [*is_dpdk*]
+#  (optional) Turns vrouter into DPDK Compute Node
+#  String value.
+#  Defaults to hiera('contrail::vrouter::is_dpdk',false)
+#
 class tripleo::network::contrail::vrouter (
   $step               = hiera('step'),
   $admin_password     = hiera('contrail::admin_password'),
@@ -168,12 +173,12 @@ class tripleo::network::contrail::vrouter (
   $physical_interface = hiera('contrail::vrouter::physical_interface'),
   $public_vip         = hiera('public_virtual_ip'),
   $is_tsn             = hiera('contrail::vrouter::is_tsn',false),
+  $is_dpdk            = hiera('contrail::vrouter::is_dpdk',false),
 ) {
     $cidr = netmask_to_cidr($netmask)
     notify { 'cidr':
       message => $cidr,
     }
-    $macaddress = inline_template("<%= scope.lookupvar('::macaddress_${physical_interface}') -%>")
     #include ::contrail::vrouter
     # NOTE: it's not possible to use this class without a functional
     # contrail controller up and running
@@ -224,8 +229,9 @@ class tripleo::network::contrail::vrouter (
       }
     }
     if $is_tsn {
+      $macaddress = inline_template("<%= scope.lookupvar('::macaddress_${physical_interface}') -%>")
       $vrouter_agent_config = {
-        'DEBUG'  => {
+        'DEFAULT'  => {
           'agent_mode' => 'tsn',
         },
         'CONTROL-NODE'  => {
@@ -246,7 +252,36 @@ class tripleo::network::contrail::vrouter (
           'port'   => $disc_server_port,
         },
       }
+    } elsif $is_dpdk {
+      $pciaddress = generate('/bin/cat','/etc/contrail/dpdk_pci')
+      $macaddress = generate('/bin/cat','/etc/contrail/dpdk_mac')
+      $vrouter_agent_config = {
+        'DEFAULT'  => {
+          'platform'                   => 'dpdk',
+          'physical_uio_driver'        => 'uio_pci_generic',
+          'physical_interface_mac'     => $macaddress,
+          'physical_interface_address' => $pciaddress,
+        },
+        'CONTROL-NODE'  => {
+          'server' => $control_server_list,
+        },
+        'VIRTUAL-HOST-INTERFACE'  => {
+          'compute_node_address' => $host_ip,
+          'gateway'              => $gateway,
+          'ip'                   => "${host_ip}/${cidr}",
+          'name'                 => 'vhost0',
+          'physical_interface'   => $physical_interface,
+        },
+        'METADATA' => {
+          'metadata_proxy_secret' => $metadata_secret,
+        },
+        'DISCOVERY' => {
+          'server' => $disc_server_ip,
+          'port'   => $disc_server_port,
+        },
+      }
     } else {
+      $macaddress = inline_template("<%= scope.lookupvar('::macaddress_${physical_interface}') -%>")
       $vrouter_agent_config = {
         'CONTROL-NODE'  => {
           'server' => $control_server_list,
@@ -272,6 +307,7 @@ class tripleo::network::contrail::vrouter (
       gateway                => $gateway,
       host_ip                => $host_ip,
       is_tsn                 => $is_tsn,
+      is_dpdk                => $is_dpdk,
       macaddr                => $macaddress,
       mask                   => $cidr,
       netmask                => $netmask,
