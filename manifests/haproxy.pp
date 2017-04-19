@@ -68,6 +68,11 @@
 #  Can be a string or an array.
 #  Defaults to undef
 #
+# [*tenant_virtual_ip*]
+#  Tenant IP or group of IPs to bind the pools
+#  Can be a string or an array.
+#  Defaults to undef
+#
 # [*public_virtual_ip*]
 #  Public IP or group of IPs to bind the pools
 #  Can be a string or an array.
@@ -320,6 +325,7 @@ class tripleo::haproxy (
   $ssl_cipher_suite          = '!SSLv2:kEECDH:kRSA:kEDH:kPSK:+3DES:!aNULL:!eNULL:!MD5:!EXP:!RC4:!SEED:!IDEA:!DES',
   $ssl_options               = 'no-sslv3',
   $haproxy_stats_certificate = undef,
+  $tenant_virtual_ip         = hiera('tenant_vip'),
   $keystone_admin            = hiera('keystone_enabled', false),
   $keystone_public           = hiera('keystone_enabled', false),
   $neutron                   = hiera('neutron_api_enabled', false),
@@ -600,7 +606,7 @@ class tripleo::haproxy (
   if $contrail_config {
     ::tripleo::haproxy::endpoint { 'contrail_config':
       public_virtual_ip => $public_virtual_ip,
-      internal_ip       => hiera('contrail_config_vip', $controller_virtual_ip),
+      internal_ip       => hiera('contrail_config_vip', $tenant_virtual_ip),
       service_port      => $ports[contrail_config_port],
       ip_addresses      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
       server_names      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
@@ -611,7 +617,7 @@ class tripleo::haproxy (
  if $contrail_config {
     ::tripleo::haproxy::endpoint { 'contrail_discovery':
       public_virtual_ip => $public_virtual_ip,
-      internal_ip       => hiera('contrail_config_vip', $controller_virtual_ip),
+      internal_ip       => hiera('contrail_config_vip', $tenant_virtual_ip),
       service_port      => $ports[contrail_discovery_port],
       ip_addresses      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
       server_names      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
@@ -622,7 +628,7 @@ class tripleo::haproxy (
  if $contrail_config {
     ::tripleo::haproxy::endpoint { 'contrail_analytics':
       public_virtual_ip => $public_virtual_ip,
-      internal_ip       => hiera('contrail_analytics_vip', $controller_virtual_ip),
+      internal_ip       => hiera('contrail_analytics_vip', $tenant_virtual_ip),
       service_port      => $ports[contrail_analytics_port],
       ip_addresses      => hiera('contrail_analytics_node_ips', $contrail_analytics_node_ips),
       server_names      => hiera('contrail_analytics_node_ips', $contrail_analytics_node_ips),
@@ -633,7 +639,7 @@ class tripleo::haproxy (
  if $contrail_config {
     ::tripleo::haproxy::endpoint { 'contrail_analytics_rest':
       public_virtual_ip => $public_virtual_ip,
-      internal_ip       => hiera('contrail_analytics_vip', $controller_virtual_ip),
+      internal_ip       => hiera('contrail_analytics_vip', $tenant_virtual_ip),
       service_port      => $ports[contrail_analytics_rest_port],
       ip_addresses      => hiera('contrail_analytics_node_ips', $contrail_analytics_node_ips),
       server_names      => hiera('contrail_analytics_node_ips', $contrail_analytics_node_ips),
@@ -644,7 +650,7 @@ class tripleo::haproxy (
  if $contrail_config {
     ::tripleo::haproxy::endpoint { 'contrail_webui_http':
       public_virtual_ip => $public_virtual_ip,
-      internal_ip       => hiera('contrail_webui_vip', $controller_virtual_ip),
+      internal_ip       => hiera('contrail_webui_vip', $tenant_virtual_ip),
       service_port      => $ports[contrail_webui_http_port],
       ip_addresses      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
       server_names      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
@@ -655,11 +661,15 @@ class tripleo::haproxy (
  if $contrail_config {
     ::tripleo::haproxy::endpoint { 'contrail_webui_https':
       public_virtual_ip => $public_virtual_ip,
-      internal_ip       => hiera('contrail_webui_vip', $controller_virtual_ip),
+      internal_ip       => hiera('contrail_webui_vip', $tenant_virtual_ip),
       service_port      => $ports[contrail_webui_https_port],
       ip_addresses      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
       server_names      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
       public_ssl_port   => $ports[contrail_webui_https_port],
+      listen_options    => {
+          'balance'   => 'source',
+          'hash-type' => 'consistent',
+      }
     }
   }
 

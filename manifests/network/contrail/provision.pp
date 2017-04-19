@@ -46,7 +46,7 @@
 # [*api_server*]
 #  (optional) IP address of api server
 #  String value.
-#  Defaults to hiera('internal_api_virtual_ip')
+#  Defaults to hiera('tenant_vip')
 #
 # [*auth_host*]
 #  (optional) keystone server ip address
@@ -75,7 +75,7 @@ class tripleo::network::contrail::provision(
   $auth_host = hiera('contrail::auth_host'),
   $auth_port = hiera('contrail::auth_port'),
   $auth_protocol = hiera('contrail::auth_protocol'),
-  $api_server = hiera('internal_api_virtual_ip'),
+  $api_server = hiera('tenant_vip'),
 )
 {
   if $step >= 5 {

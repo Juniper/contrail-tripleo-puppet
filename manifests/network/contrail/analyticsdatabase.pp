@@ -37,7 +37,7 @@
 # [*api_server*]
 #  (optional) IPv4 VIP of Contrail Config API
 #  String (IPv4) value
-#  Defaults to hiera('internal_api_virtual_ip')
+#  Defaults to hiera('tenant_vip')
 #
 # [*api_port*]
 #  (optional) Port of Contrail Config API
@@ -82,7 +82,7 @@
 # [*disc_server_ip*]
 #  (optional) IPv4 VIP of Contrail Discovery
 #  String (IPv4) value
-#  Defaults to hiera('internal_api_virtual_ip')
+#  Defaults to hiera('tenant_vip')
 #
 # [*disc_server_port*]
 #  (optional) port Discovery server listens on.
@@ -122,7 +122,7 @@
 class tripleo::network::contrail::analyticsdatabase(
   $step                 = hiera('step'),
   $auth_host            = hiera('contrail::auth_host'),
-  $api_server           = hiera('internal_api_virtual_ip'),
+  $api_server           = hiera('tenant_vip'),
   $api_port             = hiera('contrail::api_port'),
   $admin_password       = hiera('contrail::admin_password'),
   $admin_tenant_name    = hiera('contrail::admin_tenant_name'),
@@ -133,7 +133,7 @@ class tripleo::network::contrail::analyticsdatabase(
   $cassandra_servers    = hiera('contrail_analytics_database_node_ips'),
   $ca_file              = hiera('contrail::service_certificate',false),
   $cert_file            = hiera('contrail::service_certificate',false),
-  $disc_server_ip       = hiera('internal_api_virtual_ip'),
+  $disc_server_ip       = hiera('tenant_vip'),
   $disc_server_port     = hiera('contrail::disc_server_port'),
   $host_ip              = hiera('contrail::analytics::database::host_ip'),
   $host_name            = $::hostname,

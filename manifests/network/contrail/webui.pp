@@ -77,12 +77,12 @@
 # [*contrail_analytics_vip*]
 #  (optional) VIP of Contrail Analytics
 #  String (IPv4) value.
-#  Defaults to hiera('internal_api_virtual_ip')
+#  Defaults to hiera('tenant_vip')
 #
 # [*contrail_config_vip*]
 #  (optional) VIP of Contrail Config
 #  String (IPv4) value.
-#  Defaults to hiera('internal_api_virtual_ip')
+#  Defaults to hiera('tenant_vip')
 #
 # [*contrail_webui_http_port*]
 #  (optional) Webui HTTP Port
@@ -115,8 +115,8 @@ class tripleo::network::contrail::webui(
   $auth_port_ssl_public      = hiera('contrail::auth_port_ssl_public'),
   $cassandra_server_list     = hiera('contrail_database_node_ips'),
   $cert_file                 = hiera('contrail::service_certificate',false),
-  $contrail_analytics_vip    = hiera('internal_api_virtual_ip'),
-  $contrail_config_vip       = hiera('internal_api_virtual_ip'),
+  $contrail_analytics_vip    = hiera('tenant_vip'),
+  $contrail_config_vip       = hiera('tenant_vip'),
   $contrail_webui_http_port  = hiera('contrail::webui::http_port'),
   $contrail_webui_https_port = hiera('contrail::webui::https_port'),
   $neutron_vip               = hiera('internal_api_virtual_ip'),
