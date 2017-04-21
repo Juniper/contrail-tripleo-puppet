@@ -48,7 +48,7 @@
 # [*api_server*]
 #  (optional) VIP of Config API
 #  String (IPv4) value.
-#  Defaults to hiera('tenant_vip')
+#  Defaults to hiera('contrail_config_vip',hiera('internal_api_virtual_ip)')
 #
 # [*api_port*]
 #  (optional) Port of Config API
@@ -222,7 +222,7 @@ class tripleo::network::contrail::config(
   $admin_tenant_name      = hiera('contrail::admin_tenant_name'),
   $admin_token            = hiera('contrail::admin_token'),
   $admin_user             = hiera('contrail::admin_user'),
-  $api_server             = hiera('tenant_vip'),
+  $api_server             = hiera('contrail_config_vip',hiera('internal_api_virtual_ip)'),
   $api_port               = hiera('contrail::api_port'),
   $auth                   = hiera('contrail::auth'),
   $auth_host              = hiera('contrail::auth_host'),
@@ -234,7 +234,7 @@ class tripleo::network::contrail::config(
   $cert_file              = hiera('contrail::service_certificate',false),
   $config_hostnames       = hiera('contrail_config_short_node_names'),
   $control_server_list    = hiera('contrail_control_node_ips'),
-  $disc_server_ip         = hiera('tenant_vip'),
+  $disc_server_ip         = hiera('contrail_config_vip',hiera('internal_api_virtual_ip)'),
   $disc_server_port       = hiera('contrail::disc_server_port'),
   $host_ip                = hiera('contrail::config::host_ip'),
   $ifmap_password         = hiera('contrail::config::ifmap_password'),

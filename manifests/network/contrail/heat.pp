@@ -42,7 +42,7 @@
 # [*api_server*]
 #  (optional) IP address of api server
 #  String value.
-#  Defaults to hiera('tenant_vip')
+#  Defaults to hiera('contrail_config_vip',hiera('internal_api_virtual_ip)')
 #
 # [*api_port*]
 #  (optional) port of api server
@@ -69,7 +69,7 @@ class tripleo::network::contrail::heat(
   $admin_password         = hiera('contrail::admin_password'),
   $admin_token            = hiera('contrail::admin_token'),
   $admin_user             = hiera('contrail::admin_user'),
-  $api_server             = hiera('tenant_vip'),
+  $api_server             = hiera('contrail_config_vip',hiera('internal_api_virtual_ip)'),
   $api_port               = 8082,
   $auth_host              = hiera('contrail::auth_host'),
   $use_ssl                = 'False',

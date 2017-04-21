@@ -101,12 +101,6 @@ class tripleo::profile::pacemaker::haproxy (
         ip_address => $storage_mgmt_vip,
       }
 
-      $tenant_vip = hiera('tenant_virtual_ip')
-      tripleo::pacemaker::haproxy_with_vip { 'haproxy_and_tenant_vip':
-        ensure     => $tenant_vip and $tenant_vip != $control_vip,
-        vip_name   => 'tenant',
-        ip_address => $tenant_vip,
-      }
   }
 
 }

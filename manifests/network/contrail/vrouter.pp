@@ -45,7 +45,7 @@
 # [*api_server*]
 #  (optional) IP address of api server
 #  String value.
-#  Defaults to hiera('tenant_vip')
+#  Defaults to hiera('contrail_config_vip',hiera('internal_api_virtual_ip)')
 #
 # [*api_port*]
 #  (optional) port of api server
@@ -154,7 +154,7 @@ class tripleo::network::contrail::vrouter (
   $admin_token        = hiera('contrail::admin_token'),
   $admin_user         = hiera('contrail::admin_user'),
   $api_port           = hiera('contrail::api_port'),
-  $api_server         = hiera('tenant_vip'),
+  $api_server         = hiera('contrail_config_vip',hiera('internal_api_virtual_ip)'),
   $auth_host          = hiera('contrail::auth_host'),
   $auth_port          = hiera('contrail::auth_port'),
   $auth_port_ssl      = hiera('contrail::auth_port_ssl'),
@@ -162,7 +162,7 @@ class tripleo::network::contrail::vrouter (
   $ca_file            = hiera('contrail::service_certificate',false),
   $cert_file          = hiera('contrail::service_certificate',false),
   $control_server     = hiera('contrail_control_node_ips'),
-  $disc_server_ip     = hiera('tenant_vip'),
+  $disc_server_ip     = hiera('contrail_config_vip',hiera('internal_api_virtual_ip)'),
   $disc_server_port   = hiera('contrail::disc_server_port'),
   $gateway            = hiera('contrail::vrouter::gateway'),
   $host_ip            = hiera('contrail::vrouter::host_ip'),
