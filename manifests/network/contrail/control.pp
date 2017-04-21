@@ -42,7 +42,7 @@
 # [*api_server*]
 #  (optional) IP address of api server
 #  String value.
-#  Defaults to hiera('contrail_config_vip',hiera('internal_api_virtual_ip)')
+#  Defaults to hiera('contrail_config_vip',hiera('internal_api_virtual_ip'))
 #
 # [*api_port*]
 #  (optional) port of api server
@@ -127,12 +127,12 @@ class tripleo::network::contrail::control(
   $admin_tenant_name = hiera('contrail::admin_tenant_name'),
   $admin_token       = hiera('contrail::admin_token'),
   $admin_user        = hiera('contrail::admin_user'),
-  $api_server        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip)'),
+  $api_server        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $api_port          = hiera('contrail::api_port'),
   $auth_host         = hiera('contrail::auth_host'),
   $auth_port         = hiera('contrail::auth_port'),
   $auth_protocol     = hiera('contrail::auth_protocol'),
-  $disc_server_ip    = hiera('contrail_config_vip',hiera('internal_api_virtual_ip)'),
+  $disc_server_ip    = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port  = hiera('contrail::disc_server_port'),
   $host_ip           = hiera('contrail::control::host_ip'),
   $ibgp_auto_mesh    = true,

@@ -46,7 +46,7 @@
 # [*api_server*]
 #  (optional) IP address of api server
 #  String value.
-#  Defaults to hiera('contrail_config_vip',hiera('internal_api_virtual_ip)')
+#  Defaults to hiera('contrail_config_vip',hiera('internal_api_virtual_ip'))
 #
 # [*api_port*]
 #  (optional) port of api server
@@ -194,7 +194,7 @@ class tripleo::network::contrail::analytics(
   $admin_tenant_name          = hiera('contrail::admin_tenant_name'),
   $admin_token                = hiera('contrail::admin_token'),
   $admin_user                 = hiera('contrail::admin_user'),
-  $api_server                 = hiera('contrail_config_vip',hiera('internal_api_virtual_ip)'),
+  $api_server                 = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $api_port                   = hiera('contrail::api_port'),
   $auth_host                  = hiera('contrail::auth_host'),
   $auth_port                  = hiera('contrail::auth_port'),
@@ -206,7 +206,7 @@ class tripleo::network::contrail::analytics(
   $cert_file                  = hiera('contrail::service_certificate',false),
   $collector_http_server_port = hiera('contrail::analytics::collector_http_server_port'),
   $collector_sandesh_port     = hiera('contrail::analytics::collector_sandesh_port'),
-  $disc_server_ip             = hiera('contrail_config_vip',hiera('internal_api_virtual_ip)'),
+  $disc_server_ip             = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port           = hiera('contrail::disc_server_port'),
   $http_server_port           = hiera('contrail::analytics::http_server_port'),
   $host_ip                    = hiera('contrail::analytics::host_ip'),
