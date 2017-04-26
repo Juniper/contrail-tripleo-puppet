@@ -42,7 +42,7 @@
 # [*api_server*]
 #  (optional) IP address of api server
 #  String value.
-#  Defaults to hiera('internal_api_virtual_ip')
+#  Defaults to hiera('contrail_config_vip',hiera('internal_api_virtual_ip'))
 #
 # [*api_port*]
 #  (optional) port of api server
@@ -101,6 +101,11 @@
 #  String (IPv4) value + port
 #  Defaults to hiera('contrail::memcached_servers'),
 #
+# [*manage_named*]
+#  (optional) switch for managing named
+#  String
+#  Defaults to hiera('contrail::manage_named'),
+#
 # [*public_vip*]
 #  (optional) Public Virtual IP address
 #  String (IPv4) value
@@ -127,12 +132,12 @@ class tripleo::network::contrail::control(
   $admin_tenant_name = hiera('contrail::admin_tenant_name'),
   $admin_token       = hiera('contrail::admin_token'),
   $admin_user        = hiera('contrail::admin_user'),
-  $api_server        = hiera('internal_api_virtual_ip'),
+  $api_server        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $api_port          = hiera('contrail::api_port'),
   $auth_host         = hiera('contrail::auth_host'),
   $auth_port         = hiera('contrail::auth_port'),
   $auth_protocol     = hiera('contrail::auth_protocol'),
-  $disc_server_ip    = hiera('internal_api_virtual_ip'),
+  $disc_server_ip    = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port  = hiera('contrail::disc_server_port'),
   $host_ip           = hiera('contrail::control::host_ip'),
   $ibgp_auto_mesh    = true,
@@ -143,6 +148,7 @@ class tripleo::network::contrail::control(
   $public_vip        = hiera('public_virtual_ip'),
   $router_asn        = hiera('contrail::control::asn'),
   $secret            = hiera('contrail::control::rndc_secret'),
+  $manage_named      = hiera('contrail::control::manage_named'),
 )
 {
   $control_ifmap_user     = "${ifmap_username}.control"
@@ -153,6 +159,7 @@ class tripleo::network::contrail::control(
   if $step >= 3 {
     class {'::contrail::control':
       secret                 => $secret,
+      manage_named           => $manage_named,
       control_config         => {
         'DEFAULT'   => {
           'hostip' => $host_ip,
