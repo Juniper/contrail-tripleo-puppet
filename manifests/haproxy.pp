@@ -19,10 +19,6 @@
 #
 # === Parameters:
 #
-# [*keepalived*]
-#  Whether to configure keepalived to manage the VIPs or not.
-#  Defaults to true
-#
 # [*haproxy_service_manage*]
 #  Will be passed as value for service_manage to HAProxy module.
 #  Defaults to true
@@ -37,7 +33,7 @@
 #
 # [*haproxy_default_timeout*]
 #  The value to use as timeout in the HAProxy default config section.
-#  Defaults to [ 'http-request 10s', 'queue 1m', 'connect 10s', 'client 1m', 'server 1m', 'check 10s' ]
+#  Defaults to [ 'http-request 10s', 'queue 2m', 'connect 10s', 'client 2m', 'server 2m', 'check 10s' ]
 #
 # [*haproxy_listen_bind_param*]
 #  A list of params to be added to the HAProxy listener bind directive. By
@@ -67,6 +63,26 @@
 #  Control IP or group of IPs to bind the pools
 #  Can be a string or an array.
 #  Defaults to undef
+#
+# [*contrail_config_hosts*]
+#  Contrail Config node IP addresses
+#  Can be a string or an array.
+#  Defaults to hiera('contrail_config_node_ips')
+#
+# [*contrail_config_hosts_name*]
+#  Contrail Config host names
+#  Can be a string or an array.
+#  Defaults to hiera('contrail_config_node_names', undef)
+#
+# [*contrail_analytics_hosts*]
+#  Contrail Analytics node IP addresses
+#  Can be a string or an array.
+#  Defaults to hiera('contrail_analytics_node_ips')
+#
+# [*contrail_analytics_hosts_name*]
+#  Contrail Analytics host names
+#  Can be a string or an array.
+#  Defaults to hiera('contrail_analytics_node_names', undef)
 #
 # [*public_virtual_ip*]
 #  Public IP or group of IPs to bind the pools
@@ -124,6 +140,18 @@
 # [*cinder*]
 #  (optional) Enable or not Cinder API binding
 #  Defaults to hiera('cinder_api_enabled', false)
+#
+# [*contrail_config*]
+#  (optional) Enable or not Contrail Config API binding
+#  Defaults to hiera('contrail_conifg_enabled', false)
+#
+# [*contrail_analytics*]
+#  (optional) Enable or not Contrail Analytics API binding
+#  Defaults to hiera('contrail_analytics_enabled', false)
+#
+# [*contrail_webui*]
+#  (optional) Enable or not Contrail WebUI API binding
+#  Defaults to hiera('contrail_webui_enabled', false)
 #
 # [*manila*]
 #  (optional) Enable or not Manila API binding
@@ -209,6 +237,14 @@
 #  (optional) Enable check via clustercheck for mysql
 #  Defaults to false
 #
+# [*mysql_member_options*]
+#  The options to use for the mysql HAProxy balancer members.
+#  If this parameter is undefined, the actual value configured will depend
+#  on the value of $mysql_clustercheck. If cluster checking is enabled,
+#  the mysql member options will be: "['backup', 'port 9200', 'on-marked-down shutdown-sessions', 'check', 'inter 1s']"
+#  and if mysql cluster checking is disabled, the member options will be: "union($haproxy_member_options, ['backup'])"
+#  Defaults to undef
+#
 # [*rabbitmq*]
 #  (optional) Enable or not RabbitMQ binding
 #  Defaults to false
@@ -242,6 +278,10 @@
 #  (optional) Enable or not Zaqar Websockets binding
 #  Defaults to false
 #
+# [*ui*]
+#  (optional) Enable or not TripleO UI
+#  Defaults to false
+#
 # [*service_ports*]
 #  (optional) Hash that contains the values to override from the service ports
 #  The available keys to modify the services' ports are:
@@ -251,6 +291,16 @@
 #    'ceilometer_api_ssl_port' (Defaults to 13777)
 #    'cinder_api_port' (Defaults to 8776)
 #    'cinder_api_ssl_port' (Defaults to 13776)
+#    'contrail_config_port' (Defaults to 8082)
+#    'contrail_config_ssl_port' (Defaults to 18082)
+#    'contrail_discovery_port' (Defaults to 5998)
+#    'contrail_discovery_ssl_port' (Defaults to 15998)
+#    'contrail_analytics_port' (Defaults to 8090)
+#    'contrail_analytics_rest_port' (Defaults to 8081)
+#    'contrail_analytics_ssl_rest_port' (Defaults to 18081)
+#    'contrail_analytics_ssl_port' (Defaults to 18090)
+#    'contrail_webui_http_port' (Defaults to 8080)
+#    'contrail_webui_https_port' (Defaults to 8143)
 #    'glance_api_port' (Defaults to 9292)
 #    'glance_api_ssl_port' (Defaults to 13292)
 #    'glance_registry_port' (Defaults to 9191)
@@ -281,6 +331,7 @@
 #    'nova_metadata_port' (Defaults to 8775)
 #    'nova_novnc_port' (Defaults to 6080)
 #    'nova_novnc_ssl_port' (Defaults to 13080)
+#    'opendaylight_api_port' (Defaults to 8081)
 #    'sahara_api_port' (Defaults to 8386)
 #    'sahara_api_ssl_port' (Defaults to 13386)
 #    'swift_proxy_port' (Defaults to 8080)
@@ -300,61 +351,65 @@
 class tripleo::haproxy (
   $controller_virtual_ip,
   $public_virtual_ip,
-  $keepalived                = true,
-  $haproxy_service_manage    = true,
-  $haproxy_global_maxconn    = 20480,
-  $haproxy_default_maxconn   = 4096,
-  $haproxy_default_timeout   = [ 'http-request 10s', 'queue 1m', 'connect 10s', 'client 1m', 'server 1m', 'check 10s' ],
-  $haproxy_listen_bind_param = [ 'transparent' ],
-  $haproxy_member_options    = [ 'check', 'inter 2000', 'rise 2', 'fall 5' ],
-  $haproxy_log_address       = '/dev/log',
-  $haproxy_stats_user        = 'admin',
-  $haproxy_stats_password    = undef,
-  $contrail_config_hosts     = hiera('contrail_config_node_ips'),
-  $contrail_analytics_hosts  = hiera('contrail_analytics_node_ips'),
-  $contrail_config_hosts_names     = hiera('contrail_config_node_names', undef),
-  $controller_hosts          = hiera('controller_node_ips'),
-  $controller_hosts_names    = hiera('controller_node_names', undef),
-  $service_certificate       = undef,
-  $internal_certificate      = undef,
-  $ssl_cipher_suite          = '!SSLv2:kEECDH:kRSA:kEDH:kPSK:+3DES:!aNULL:!eNULL:!MD5:!EXP:!RC4:!SEED:!IDEA:!DES',
-  $ssl_options               = 'no-sslv3',
-  $haproxy_stats_certificate = undef,
-  $keystone_admin            = hiera('keystone_enabled', false),
-  $keystone_public           = hiera('keystone_enabled', false),
-  $neutron                   = hiera('neutron_api_enabled', false),
-  $cinder                    = hiera('cinder_api_enabled', false),
-  $contrail_config           = hiera('contrail_config_enabled', false),
-  $manila                    = hiera('manila_api_enabled', false),
-  $sahara                    = hiera('sahara_api_enabled', false),
-  $trove                     = hiera('trove_api_enabled', false),
-  $glance_api                = hiera('glance_api_enabled', false),
-  $glance_registry           = hiera('glance_registry_enabled', false),
-  $nova_osapi                = hiera('nova_api_enabled', false),
-  $nova_metadata             = hiera('nova_api_enabled', false),
-  $nova_novncproxy           = hiera('nova_vnc_proxy_enabled', false),
-  $ceilometer                = hiera('ceilometer_api_enabled', false),
-  $aodh                      = hiera('aodh_api_enabled', false),
-  $gnocchi                   = hiera('gnocchi_api_enabled', false),
-  $mistral                   = hiera('mistral_api_enabled', false),
-  $swift_proxy_server        = hiera('swift_proxy_enabled', false),
-  $heat_api                  = hiera('heat_api_enabled', false),
-  $heat_cloudwatch           = hiera('heat_api_cloudwatch_enabled', false),
-  $heat_cfn                  = hiera('heat_api_cfn_enabled', false),
-  $horizon                   = hiera('horizon_enabled', false),
-  $ironic                    = hiera('ironic_api_enabled', false),
-  $ironic_inspector          = hiera('ironic_inspector_enabled', false),
-  $mysql                     = hiera('mysql_enabled', false),
-  $mysql_clustercheck        = false,
-  $rabbitmq                  = false,
-  $redis                     = hiera('redis_enabled', false),
-  $redis_password            = undef,
-  $midonet_api               = false,
-  $zaqar_api                 = hiera('zaqar_api_enabled', false),
-  $ceph_rgw                  = hiera('ceph_rgw_enabled', false),
-  $opendaylight              = hiera('opendaylight_api_enabled', false),
-  $zaqar_ws                  = hiera('zaqar_api_enabled', false),
-  $service_ports             = {}
+  $haproxy_service_manage         = true,
+  $haproxy_global_maxconn         = 20480,
+  $haproxy_default_maxconn        = 4096,
+  $haproxy_default_timeout        = [ 'http-request 10s', 'queue 2m', 'connect 10s', 'client 2m', 'server 2m', 'check 10s' ],
+  $haproxy_listen_bind_param      = [ 'transparent' ],
+  $haproxy_member_options         = [ 'check', 'inter 2000', 'rise 2', 'fall 5' ],
+  $haproxy_log_address            = '/dev/log',
+  $haproxy_stats_user             = 'admin',
+  $haproxy_stats_password         = undef,
+  $controller_hosts               = hiera('controller_node_ips'),
+  $controller_hosts_names         = hiera('controller_node_names', undef),
+  $contrail_config_hosts          = hiera('contrail_config_node_ips'),
+  $contrail_config_hosts_names    = hiera('contrail_config_node_names', undef),
+  $contrail_analytics_hosts       = hiera('contrail_analytics_node_ips', undef),
+  $contrail_analytics_hosts_names = hiera('contrail_analytics_node_names', undef),
+  $service_certificate            = undef,
+  $internal_certificate           = undef,
+  $ssl_cipher_suite               = '!SSLv2:kEECDH:kRSA:kEDH:kPSK:+3DES:!aNULL:!eNULL:!MD5:!EXP:!RC4:!SEED:!IDEA:!DES',
+  $ssl_options                    = 'no-sslv3',
+  $haproxy_stats_certificate      = undef,
+  $keystone_admin                 = hiera('keystone_enabled', false),
+  $keystone_public                = hiera('keystone_enabled', false),
+  $neutron                        = hiera('neutron_api_enabled', false),
+  $cinder                         = hiera('cinder_api_enabled', false),
+  $contrail_config                = hiera('contrail_config_enabled', false),
+  $contrail_analytics             = hiera('contrail_analytics_enabled', false),
+  $contrail_webui                 = hiera('contrail_webui_enabled', false),
+  $manila                         = hiera('manila_api_enabled', false),
+  $sahara                         = hiera('sahara_api_enabled', false),
+  $trove                          = hiera('trove_api_enabled', false),
+  $glance_api                     = hiera('glance_api_enabled', false),
+  $glance_registry                = hiera('glance_registry_enabled', false),
+  $nova_osapi                     = hiera('nova_api_enabled', false),
+  $nova_metadata                  = hiera('nova_api_enabled', false),
+  $nova_novncproxy                = hiera('nova_vnc_proxy_enabled', false),
+  $ceilometer                     = hiera('ceilometer_api_enabled', false),
+  $aodh                           = hiera('aodh_api_enabled', false),
+  $gnocchi                        = hiera('gnocchi_api_enabled', false),
+  $mistral                        = hiera('mistral_api_enabled', false),
+  $swift_proxy_server             = hiera('swift_proxy_enabled', false),
+  $heat_api                       = hiera('heat_api_enabled', false),
+  $heat_cloudwatch                = hiera('heat_api_cloudwatch_enabled', false),
+  $heat_cfn                       = hiera('heat_api_cfn_enabled', false),
+  $horizon                        = hiera('horizon_enabled', false),
+  $ironic                         = hiera('ironic_api_enabled', false),
+  $ironic_inspector               = hiera('ironic_inspector_enabled', false),
+  $mysql                          = hiera('mysql_enabled', false),
+  $mysql_clustercheck             = false,
+  $mysql_member_options           = undef,
+  $rabbitmq                       = false,
+  $redis                          = hiera('redis_enabled', false),
+  $redis_password                 = undef,
+  $midonet_api                    = false,
+  $zaqar_api                      = hiera('zaqar_api_enabled', false),
+  $ceph_rgw                       = hiera('ceph_rgw_enabled', false),
+  $opendaylight                   = hiera('opendaylight_api_enabled', false),
+  $zaqar_ws                       = hiera('zaqar_api_enabled', false),
+  $ui                             = hiera('enable_ui', false),
+  $service_ports                  = {}
 ) {
   $default_service_ports = {
     aodh_api_port => 8042,
@@ -403,12 +458,15 @@ class tripleo::haproxy (
     nova_metadata_port => 8775,
     nova_novnc_port => 6080,
     nova_novnc_ssl_port => 13080,
+    opendaylight_api_port => 8081,
     sahara_api_port => 8386,
     sahara_api_ssl_port => 13386,
     swift_proxy_port => 8080,
     swift_proxy_ssl_port => 13808,
     trove_api_port => 8779,
     trove_api_ssl_port => 13779,
+    ui_port => 3000,
+    ui_ssl_port => 443,
     zaqar_api_port => 8888,
     zaqar_api_ssl_port => 13888,
     ceph_rgw_port => 8080,
@@ -423,11 +481,6 @@ class tripleo::haproxy (
     $controller_hosts_names_real = $controller_hosts_real
   } else {
     $controller_hosts_names_real = downcase(any2array(split($controller_hosts_names, ',')))
-  }
-
-  # This code will be removed once we switch undercloud and overcloud to use both haproxy & keepalived roles.
-  if $keepalived {
-    include ::tripleo::keepalived
   }
 
   # TODO(bnemec): When we have support for SSL on private and admin endpoints,
@@ -593,10 +646,33 @@ class tripleo::haproxy (
       service_port      => $ports[neutron_api_port],
       ip_addresses      => hiera('neutron_api_node_ips', $controller_hosts_real),
       server_names      => hiera('neutron_api_node_names', $controller_hosts_names_real),
+      mode              => 'http',
+      listen_options    => {
+          'http-request' => [
+            'set-header X-Forwarded-Proto https if { ssl_fc }',
+            'set-header X-Forwarded-Proto http if !{ ssl_fc }'],
+      },
       public_ssl_port   => $ports[neutron_api_ssl_port],
     }
   }
-#      internal_ip       => hiera('manila_api_vip', $controller_virtual_ip),
+
+  if $cinder {
+    ::tripleo::haproxy::endpoint { 'cinder':
+      public_virtual_ip => $public_virtual_ip,
+      internal_ip       => hiera('cinder_api_vip', $controller_virtual_ip),
+      service_port      => $ports[cinder_api_port],
+      ip_addresses      => hiera('cinder_api_node_ips', $controller_hosts_real),
+      server_names      => hiera('cinder_api_node_names', $controller_hosts_names_real),
+      mode              => 'http',
+      listen_options    => {
+          'http-request' => [
+            'set-header X-Forwarded-Proto https if { ssl_fc }',
+            'set-header X-Forwarded-Proto http if !{ ssl_fc }'],
+      },
+      public_ssl_port   => $ports[cinder_api_ssl_port],
+    }
+  }
+
   if $contrail_config {
     ::tripleo::haproxy::endpoint { 'contrail_config':
       public_virtual_ip => $public_virtual_ip,
@@ -619,7 +695,7 @@ class tripleo::haproxy (
     }
   }
 
- if $contrail_config {
+ if $contrail_analytics {
     ::tripleo::haproxy::endpoint { 'contrail_analytics':
       public_virtual_ip => $public_virtual_ip,
       internal_ip       => hiera('contrail_analytics_vip', $controller_virtual_ip),
@@ -630,7 +706,7 @@ class tripleo::haproxy (
     }
   }
 
- if $contrail_config {
+ if $contrail_analytics {
     ::tripleo::haproxy::endpoint { 'contrail_analytics_rest':
       public_virtual_ip => $public_virtual_ip,
       internal_ip       => hiera('contrail_analytics_vip', $controller_virtual_ip),
@@ -641,7 +717,7 @@ class tripleo::haproxy (
     }
   }
 
- if $contrail_config {
+ if $contrail_webui {
     ::tripleo::haproxy::endpoint { 'contrail_webui_http':
       public_virtual_ip => $public_virtual_ip,
       internal_ip       => hiera('contrail_webui_vip', $controller_virtual_ip),
@@ -652,7 +728,7 @@ class tripleo::haproxy (
     }
   }
 
- if $contrail_config {
+ if $contrail_webui {
     ::tripleo::haproxy::endpoint { 'contrail_webui_https':
       public_virtual_ip => $public_virtual_ip,
       internal_ip       => hiera('contrail_webui_vip', $controller_virtual_ip),
@@ -664,23 +740,6 @@ class tripleo::haproxy (
           'balance'   => 'source',
           'hash-type' => 'consistent',
       }
-    }
-  }
-
-  if $cinder {
-    ::tripleo::haproxy::endpoint { 'cinder':
-      public_virtual_ip => $public_virtual_ip,
-      internal_ip       => hiera('cinder_api_vip', $controller_virtual_ip),
-      service_port      => $ports[cinder_api_port],
-      ip_addresses      => hiera('cinder_api_node_ips', $controller_hosts_real),
-      server_names      => hiera('cinder_api_node_names', $controller_hosts_names_real),
-      mode              => 'http',
-      listen_options    => {
-          'http-request' => [
-            'set-header X-Forwarded-Proto https if { ssl_fc }',
-            'set-header X-Forwarded-Proto http if !{ ssl_fc }'],
-      },
-      public_ssl_port   => $ports[cinder_api_ssl_port],
     }
   }
 
@@ -797,6 +856,12 @@ class tripleo::haproxy (
       service_port      => $ports[ceilometer_api_port],
       ip_addresses      => hiera('ceilometer_api_node_ips', $controller_hosts_real),
       server_names      => hiera('ceilometer_api_node_names', $controller_hosts_names_real),
+      mode              => 'http',
+      listen_options    => {
+          'http-request' => [
+            'set-header X-Forwarded-Proto https if { ssl_fc }',
+            'set-header X-Forwarded-Proto http if !{ ssl_fc }'],
+      },
       public_ssl_port   => $ports[ceilometer_api_ssl_port],
     }
   }
@@ -808,6 +873,12 @@ class tripleo::haproxy (
       service_port      => $ports[aodh_api_port],
       ip_addresses      => hiera('aodh_api_node_ips', $controller_hosts_real),
       server_names      => hiera('aodh_api_node_names', $controller_hosts_names_real),
+      mode              => 'http',
+      listen_options    => {
+          'http-request' => [
+            'set-header X-Forwarded-Proto https if { ssl_fc }',
+            'set-header X-Forwarded-Proto http if !{ ssl_fc }'],
+      },
       public_ssl_port   => $ports[aodh_api_ssl_port],
     }
   }
@@ -819,6 +890,12 @@ class tripleo::haproxy (
       service_port      => $ports[gnocchi_api_port],
       ip_addresses      => hiera('gnocchi_api_node_ips', $controller_hosts_real),
       server_names      => hiera('gnocchi_api_node_names', $controller_hosts_names_real),
+      mode              => 'http',
+      listen_options    => {
+          'http-request' => [
+            'set-header X-Forwarded-Proto https if { ssl_fc }',
+            'set-header X-Forwarded-Proto http if !{ ssl_fc }'],
+      },
       public_ssl_port   => $ports[gnocchi_api_ssl_port],
     }
   }
@@ -835,12 +912,17 @@ class tripleo::haproxy (
   }
 
   if $swift_proxy_server {
+    $swift_proxy_server_listen_options = {
+      'timeout client' => '2m',
+      'timeout server' => '2m',
+    }
     ::tripleo::haproxy::endpoint { 'swift_proxy_server':
       public_virtual_ip => $public_virtual_ip,
       internal_ip       => hiera('swift_proxy_vip', $controller_virtual_ip),
       service_port      => $ports[swift_proxy_port],
       ip_addresses      => hiera('swift_proxy_node_ips', $controller_hosts_real),
       server_names      => hiera('swift_proxy_node_names', $controller_hosts_names_real),
+      listen_options    => $swift_proxy_server_listen_options,
       public_ssl_port   => $ports[swift_proxy_ssl_port],
     }
   }
@@ -945,13 +1027,21 @@ class tripleo::haproxy (
       'stick-table'    => 'type ip size 1000',
       'stick'          => 'on dst',
     }
-    $mysql_member_options = union($haproxy_member_options, ['backup', 'port 9200', 'on-marked-down shutdown-sessions'])
+    if $mysql_member_options {
+        $mysql_member_options_real = $mysql_member_options
+    } else {
+        $mysql_member_options_real = ['backup', 'port 9200', 'on-marked-down shutdown-sessions', 'check', 'inter 1s']
+    }
   } else {
     $mysql_listen_options = {
       'timeout client' => '90m',
       'timeout server' => '90m',
     }
-    $mysql_member_options = union($haproxy_member_options, ['backup'])
+    if $mysql_member_options {
+        $mysql_member_options_real = $mysql_member_options
+    } else {
+        $mysql_member_options_real = union($haproxy_member_options, ['backup'])
+    }
   }
 
   if $mysql {
@@ -965,7 +1055,7 @@ class tripleo::haproxy (
       ports             => '3306',
       ipaddresses       => hiera('mysql_node_ips', $controller_hosts_real),
       server_names      => hiera('mysql_node_names', $controller_hosts_names_real),
-      options           => $mysql_member_options,
+      options           => $mysql_member_options_real,
     }
   }
 
@@ -1058,26 +1148,16 @@ class tripleo::haproxy (
     }
   }
 
-  $opendaylight_api_vip = hiera('opendaylight_api_vip', $controller_virtual_ip)
-  $opendaylight_bind_opts = {
-    "${opendaylight_api_vip}:8081" => [],
-    "${public_virtual_ip}:8081" => [],
-  }
-
   if $opendaylight {
-    haproxy::listen { 'opendaylight':
-      bind             => $opendaylight_bind_opts,
-      options          => {
+    ::tripleo::haproxy::endpoint { 'opendaylight':
+      internal_ip    => unique([hiera('opendaylight_api_vip', $controller_virtual_ip), $controller_virtual_ip]),
+      service_port   => $ports[opendaylight_api_port],
+      ip_addresses   => hiera('opendaylight_api_node_ips', $controller_hosts_real),
+      server_names   => hiera('opendaylight_api_node_names', $controller_hosts_names_real),
+      mode           => 'http',
+      listen_options => {
         'balance' => 'source',
       },
-      collect_exported => false,
-    }
-    haproxy::balancermember { 'opendaylight':
-      listening_service => 'opendaylight',
-      ports             => '8081',
-      ipaddresses       => hiera('opendaylight_api_node_ips', $controller_hosts_real),
-      server_names      => hiera('opendaylight_api_node_names', $controller_hosts_names_real),
-      options           => ['check', 'inter 2000', 'rise 2', 'fall 5'],
     }
   }
 
@@ -1102,4 +1182,17 @@ class tripleo::haproxy (
       public_ssl_port           => $ports[zaqar_ws_ssl_port],
     }
   }
+
+  if $ui {
+    ::tripleo::haproxy::endpoint { 'ui':
+      public_virtual_ip => $public_virtual_ip,
+      internal_ip       => hiera('ui_vip', $controller_virtual_ip),
+      service_port      => $ports[ui_port],
+      ip_addresses      => hiera('ui_ips', $controller_hosts_real),
+      server_names      => $controller_hosts_names_real,
+      mode              => 'http',
+      public_ssl_port   => $ports[ui_ssl_port],
+    }
+  }
+
 }
