@@ -101,6 +101,11 @@
 #  String (IPv4) value + port
 #  Defaults to hiera('contrail::memcached_servers'),
 #
+# [*manage_named*]
+#  (optional) switch for managing named
+#  String
+#  Defaults to hiera('contrail::manage_named'),
+#
 # [*public_vip*]
 #  (optional) Public Virtual IP address
 #  String (IPv4) value
@@ -143,6 +148,7 @@ class tripleo::network::contrail::control(
   $public_vip        = hiera('public_virtual_ip'),
   $router_asn        = hiera('contrail::control::asn'),
   $secret            = hiera('contrail::control::rndc_secret'),
+  $manage_named      = hiera('contrail::control::manage_named'),
 )
 {
   $control_ifmap_user     = "${ifmap_username}.control"
@@ -153,6 +159,7 @@ class tripleo::network::contrail::control(
   if $step >= 3 {
     class {'::contrail::control':
       secret                 => $secret,
+      manage_named           => $manage_named,
       control_config         => {
         'DEFAULT'   => {
           'hostip' => $host_ip,
