@@ -161,7 +161,7 @@ class tripleo::network::contrail::vrouter (
   $auth_protocol      = hiera('contrail::auth_protocol'),
   $ca_file            = hiera('contrail::service_certificate',false),
   $cert_file          = hiera('contrail::service_certificate',false),
-  $control_server     = hiera('contrail_control_node_ips'),
+  $control_server     = hiera('contrail::vrouter::control_node_ips'),
   $disc_server_ip     = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port   = hiera('contrail::disc_server_port'),
   $gateway            = hiera('contrail::vrouter::gateway'),
@@ -182,7 +182,12 @@ class tripleo::network::contrail::vrouter (
     #include ::contrail::vrouter
     # NOTE: it's not possible to use this class without a functional
     # contrail controller up and running
-    $control_server_list = join($control_server, ' ')
+    if size($control_server) == 0 {
+      #$control_server_list = join(hiera('contrail_control_node_ips'), ' ')
+      $control_server_list = ''
+    } else {
+      $control_server_list = join($control_server, ' ')
+    }
     if $auth_protocol == 'https' {
       $keystone_config = {
         'KEYSTONE' => {
@@ -234,6 +239,9 @@ class tripleo::network::contrail::vrouter (
         'DEFAULT'  => {
           'agent_mode' => 'tsn',
         },
+        'DNS'  => {
+          'server' => $control_server_list,
+        },
         'CONTROL-NODE'  => {
           'server' => $control_server_list,
         },
@@ -262,6 +270,9 @@ class tripleo::network::contrail::vrouter (
           'physical_interface_mac'     => $macaddress,
           'physical_interface_address' => $pciaddress,
         },
+        'DNS'  => {
+          'server' => $control_server_list,
+        },
         'CONTROL-NODE'  => {
           'server' => $control_server_list,
         },
@@ -283,6 +294,9 @@ class tripleo::network::contrail::vrouter (
     } else {
       $macaddress = inline_template("<%= scope.lookupvar('::macaddress_${physical_interface}') -%>")
       $vrouter_agent_config = {
+        'DNS'  => {
+          'server' => $control_server_list,
+        },
         'CONTROL-NODE'  => {
           'server' => $control_server_list,
         },
