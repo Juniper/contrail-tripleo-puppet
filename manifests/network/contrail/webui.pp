@@ -109,7 +109,7 @@ class tripleo::network::contrail::webui(
   $admin_tenant_name         = hiera('contrail::admin_tenant_name'),
   $admin_token               = hiera('contrail::admin_token'),
   $admin_user                = hiera('contrail::admin_user'),
-  $auth_host                 = hiera('contrail::auth_host'),
+  $auth_host                 = hiera('internal_api_virtual_ip'),
   $auth_protocol             = hiera('contrail::auth_protocol'),
   $auth_port_public          = hiera('contrail::auth_port_public'),
   $auth_port_ssl_public      = hiera('contrail::auth_port_ssl_public'),
