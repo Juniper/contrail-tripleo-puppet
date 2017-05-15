@@ -78,10 +78,10 @@
 #  String value.
 #  Defaults to $::hostname
 #
-# [*public_vip*]
+# [*internal_vip*]
 #  (optional) Public virtual ip
 #  String value.
-#  Defaults to hiera('public_virtual_ip')
+#  Defaults to hiera('internal_api_virtual_ip')
 #
 # [*step*]
 #  (optional) Step stack is in
@@ -117,7 +117,7 @@ class tripleo::network::contrail::database(
   $disc_server_port     = hiera('contrail::disc_server_port'),
   $host_ip              = hiera('contrail::database::host_ip'),
   $host_name            = $::hostname,
-  $public_vip           = hiera('public_virtual_ip'),
+  $internal_vip           = hiera('internal_api_virtual_ip'),
   $zookeeper_client_ip  = hiera('contrail::database::host_ip'),
   $zookeeper_hostnames  = hiera('contrail_database_short_node_names'),
   $zookeeper_server_ips = hiera('contrail_database_node_ips'),
@@ -160,7 +160,7 @@ class tripleo::network::contrail::database(
       keystone_admin_user        => $admin_user,
       keystone_admin_password    => $admin_password,
       keystone_admin_tenant_name => $admin_tenant_name,
-      openstack_vip              => $public_vip,
+      openstack_vip              => $auth_host,
     }
   }
 }

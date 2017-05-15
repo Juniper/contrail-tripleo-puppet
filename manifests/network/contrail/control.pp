@@ -106,10 +106,10 @@
 #  String
 #  Defaults to hiera('contrail::manage_named'),
 #
-# [*public_vip*]
+# [*internal_vip*]
 #  (optional) Public Virtual IP address
 #  String (IPv4) value
-#  Defaults to hiera('public_virtual_ip')
+#  Defaults to hiera('internal_api_virtual_ip')
 #
 # [*router_asn*]
 #  (optional) Autonomus System Number
@@ -145,7 +145,7 @@ class tripleo::network::contrail::control(
   $ifmap_username    = hiera('contrail::control::host_ip'),
   $insecure          = hiera('contrail::insecure'),
   $memcached_servers = hiera('contrail::memcached_server'),
-  $public_vip        = hiera('public_virtual_ip'),
+  $internal_vip        = hiera('internal_api_virtual_ip'),
   $router_asn        = hiera('contrail::control::asn'),
   $secret            = hiera('contrail::control::rndc_secret'),
   $manage_named      = hiera('contrail::control::manage_named'),

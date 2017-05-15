@@ -133,10 +133,10 @@
 #  String (IPv4) value + port
 #  Defaults to hiera('contrail::memcached_server')
 #
-# [*public_vip*]
+# [*internal_vip*]
 #  (optional) Public virtual IP address
 #  String (IPv4) value
-#  Defaults to hiera('public_virtual_ip')
+#  Defaults to hiera('internal_api_virtual_ip')
 #
 # [*rabbit_server*]
 #  (optional) IPv4 addresses of rabbit server.
@@ -213,7 +213,7 @@ class tripleo::network::contrail::analytics(
   $insecure                   = hiera('contrail::insecure'),
   $kafka_broker_list          = hiera('contrail_analytics_database_node_ips'),
   $memcached_servers          = hiera('contrail::memcached_server'),
-  $public_vip                 = hiera('public_virtual_ip'),
+  $internal_vip                 = hiera('internal_api_virtual_ip'),
   $rabbit_server              = hiera('rabbitmq_node_ips'),
   $rabbit_user                = hiera('contrail::rabbit_user'),
   $rabbit_password            = hiera('contrail::rabbit_password'),
@@ -246,7 +246,7 @@ class tripleo::network::contrail::analytics(
     }
     $vnc_api_lib_config = {
       'auth' => {
-        'AUTHN_SERVER'   => $public_vip,
+        'AUTHN_SERVER'   => $auth_host,
         'AUTHN_PORT'     => $auth_port_ssl,
         'AUTHN_PROTOCOL' => $auth_protocol,
         'certfile'       => $cert_file,
@@ -265,7 +265,7 @@ class tripleo::network::contrail::analytics(
     }
     $vnc_api_lib_config = {
       'auth' => {
-        'AUTHN_SERVER' => $public_vip,
+        'AUTHN_SERVER' => $auth_host,
       },
     }
   }
@@ -381,7 +381,7 @@ class tripleo::network::contrail::analytics(
       keystone_admin_user        => $admin_user,
       keystone_admin_password    => $admin_password,
       keystone_admin_tenant_name => $admin_tenant_name,
-      openstack_vip              => $public_vip,
+      openstack_vip              => $auth_host,
     }
   }
 }

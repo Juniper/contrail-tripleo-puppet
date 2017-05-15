@@ -175,10 +175,10 @@
 #  String (IPv4) value + port
 #  Defaults to hiera('contrail::memcached_server')
 #
-# [*public_vip*]
+# [*internal_vip*]
 #  (optional) Public virtual ip
 #  String value.
-#  Defaults to hiera('public_virtual_ip')
+#  Defaults to hiera('internal_api_virtual_ip')
 #
 # [*step*]
 #  (optional) Step stack is in
@@ -248,7 +248,7 @@ class tripleo::network::contrail::config(
   $linklocal_service_name = 'metadata',
   $linklocal_service_ip   = '169.254.169.254',
   $memcached_servers      = hiera('contrail::memcached_server'),
-  $public_vip             = hiera('public_virtual_ip'),
+  $internal_vip             = hiera('internal_api_virtual_ip'),
   $rabbit_server          = hiera('rabbitmq_node_ips'),
   $rabbit_user            = hiera('contrail::rabbit_user'),
   $rabbit_password        = hiera('contrail::rabbit_password'),
@@ -285,7 +285,7 @@ class tripleo::network::contrail::config(
     }
     $vnc_api_lib_config = {
       'auth' => {
-        'AUTHN_SERVER'   => $public_vip,
+        'AUTHN_SERVER'   => $auth_host,
         'AUTHN_PORT'     => $auth_port_ssl,
         'AUTHN_PROTOCOL' => $auth_protocol,
         'certfile'       => $cert_file,
@@ -308,7 +308,7 @@ class tripleo::network::contrail::config(
     }
     $vnc_api_lib_config = {
       'auth' => {
-        'AUTHN_SERVER' => $public_vip,
+        'AUTHN_SERVER' => $auth_host,
       },
     }
   }
@@ -406,7 +406,7 @@ class tripleo::network::contrail::config(
       keystone_admin_user        => $admin_user,
       keystone_admin_password    => $admin_password,
       keystone_admin_tenant_name => $admin_tenant_name,
-      openstack_vip              => $public_vip,
+      openstack_vip              => $auth_host,
     }
     if $config_hostnames[0] == $::hostname {
       class {'::contrail::config::provision_linklocal':

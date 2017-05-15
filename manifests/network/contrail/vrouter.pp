@@ -132,10 +132,10 @@
 #  String value.
 #  Defaults to hiera('contrail::vrouter::physical_interface')
 #
-# [*public_vip*]
+# [*internal_vip*]
 #  (optional) Public VIP to Keystone
 #  String (IPv4) value.
-#  Defaults to hiera('public_virtual_ip')
+#  Defaults to hiera('internal_api_virtual_ip')
 #
 # [*is_tsn*]
 #  (optional) Turns vrouter into TSN
@@ -171,7 +171,7 @@ class tripleo::network::contrail::vrouter (
   $metadata_secret    = hiera('contrail::vrouter::metadata_proxy_shared_secret'),
   $netmask            = hiera('contrail::vrouter::netmask'),
   $physical_interface = hiera('contrail::vrouter::physical_interface'),
-  $public_vip         = hiera('public_virtual_ip'),
+  $internal_vip         = hiera('internal_api_virtual_ip'),
   $is_tsn             = hiera('contrail::vrouter::is_tsn',false),
   $is_dpdk            = hiera('contrail::vrouter::is_dpdk',false),
 ) {
@@ -206,7 +206,7 @@ class tripleo::network::contrail::vrouter (
       }
       $vnc_api_lib_config = {
         'auth' => {
-          'AUTHN_SERVER'   => $public_vip,
+          'AUTHN_SERVER'   => $auth_host,
           'AUTHN_PORT'     => $auth_port_ssl,
           'AUTHN_PROTOCOL' => $auth_protocol,
           'certfile'       => $cert_file,
@@ -229,7 +229,7 @@ class tripleo::network::contrail::vrouter (
       }
       $vnc_api_lib_config = {
         'auth' => {
-          'AUTHN_SERVER' => $public_vip,
+          'AUTHN_SERVER' => $auth_host,
         },
       }
     }
