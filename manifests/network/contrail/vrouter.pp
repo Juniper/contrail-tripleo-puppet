@@ -245,6 +245,9 @@ class tripleo::network::contrail::vrouter (
         'CONTROL-NODE'  => {
           'server' => $control_server_list,
         },
+        'NETWORKS'  => {
+          'control_network_ip' => $host_ip,
+        },
         'VIRTUAL-HOST-INTERFACE'  => {
           'compute_node_address' => $host_ip,
           'gateway'              => $gateway,
@@ -276,6 +279,9 @@ class tripleo::network::contrail::vrouter (
         'CONTROL-NODE'  => {
           'server' => $control_server_list,
         },
+        'NETWORKS'  => {
+          'control_network_ip' => $host_ip,
+        },
         'VIRTUAL-HOST-INTERFACE'  => {
           'compute_node_address' => $host_ip,
           'gateway'              => $gateway,
@@ -299,6 +305,9 @@ class tripleo::network::contrail::vrouter (
         },
         'CONTROL-NODE'  => {
           'server' => $control_server_list,
+        },
+        'NETWORKS'  => {
+          'control_network_ip' => $host_ip,
         },
         'VIRTUAL-HOST-INTERFACE'  => {
           'compute_node_address' => $host_ip,
