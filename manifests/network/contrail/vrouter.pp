@@ -193,7 +193,6 @@ class tripleo::network::contrail::vrouter (
         'KEYSTONE' => {
           'admin_password'    => $admin_password,
           'admin_tenant_name' => $admin_tenant_name,
-          'admin_token'       => $admin_token,
           'admin_user'        => $admin_user,
           'auth_host'         => $auth_host,
           'auth_port'         => $auth_port_ssl,
@@ -218,7 +217,6 @@ class tripleo::network::contrail::vrouter (
         'KEYSTONE' => {
           'admin_password'    => $admin_password,
           'admin_tenant_name' => $admin_tenant_name,
-          'admin_token'       => $admin_token,
           'admin_user'        => $admin_user,
           'auth_host'         => $auth_host,
           'auth_port'         => $auth_port,

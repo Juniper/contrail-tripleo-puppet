@@ -197,7 +197,6 @@ class tripleo::network::contrail::neutron_plugin (
       'KEYSTONE/admin_user' :              value => $admin_user;
       'KEYSTONE/admin_tenant_name':        value => $admin_tenant_name;
       'KEYSTONE/admin_password':           value => $admin_password, secret =>true;
-      'KEYSTONE/admin_token':              value => $admin_token, secret =>true;
       'KEYSTONE/cafile':                   value => $ca_file;
       'KEYSTONE/certfile':                 value => $cert_file;
       'keystone_authtoken/admin_user':     value => $admin_user;
@@ -219,7 +218,6 @@ class tripleo::network::contrail::neutron_plugin (
       'KEYSTONE/admin_user' :              value => $admin_user;
       'KEYSTONE/admin_tenant_name':        value => $admin_tenant_name;
       'KEYSTONE/admin_password':           value => $admin_password, secret =>true;
-      'KEYSTONE/admin_token':              value => $admin_token, secret =>true;
       'keystone_authtoken/admin_user':     value => $admin_user;
       'keystone_authtoken/admin_tenant':   value => $admin_tenant_name;
       'keystone_authtoken/admin_password': value => $admin_password, secret =>true;

@@ -166,7 +166,6 @@ class tripleo::network::contrail::analyticsdatabase(
         'api_server'            => $api_server,
         'admin_password'        => $admin_password,
         'admin_tenant_name'     => $admin_tenant_name,
-        'admin_token'           => $admin_token,
         'admin_user'            => $admin_user,
         'cassandra_servers'     => $cassandra_servers,
         'host_ip'               => $host_ip,
