@@ -270,6 +270,9 @@ class tripleo::network::contrail::vrouter (
           'physical_uio_driver'        => 'uio_pci_generic',
           'physical_interface_mac'     => $macaddress,
           'physical_interface_address' => $pciaddress,
+          'log_file'                   => '/var/log/contrail/contrail-vrouter-agent.log',
+          'log_level'                  => 'log_level',
+          'log_local'                  => '1',
         },
         'DNS'  => {
           'server' => $control_server_list,
@@ -293,6 +296,9 @@ class tripleo::network::contrail::vrouter (
         'DISCOVERY' => {
           'server' => $disc_server_ip,
           'port'   => $disc_server_port,
+        },
+        'SERVICE-INSTANCE' => {
+          'netns_command' => '/usr/bin/opencontrail-vrouter-netns',
         },
       }
     } else {
