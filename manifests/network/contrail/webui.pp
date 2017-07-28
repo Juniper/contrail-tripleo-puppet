@@ -49,16 +49,6 @@
 #  Integer value.
 #  Defaults to hiera('contrail::auth_port_public')
 #
-# [*auth_port_ssl*]
-#  (optional) keystone ssl port.
-#  Integer value.
-#  Defaults to hiera('contrail::auth_port_ssl')
-#
-# [*auth_port_ssl_public*]
-#  (optional) keystone public ssl port.
-#  Integer value.
-#  Defaults to hiera('contrail::auth_port_ssl_public')
-#
 # [*auth_protocol*]
 #  (optional) authentication protocol.
 #  String value.
@@ -112,7 +102,6 @@ class tripleo::network::contrail::webui(
   $auth_host                 = hiera('internal_api_virtual_ip'),
   $auth_protocol             = hiera('contrail::auth_protocol'),
   $auth_port_public          = hiera('contrail::auth_port_public'),
-  $auth_port_ssl_public      = hiera('contrail::auth_port_ssl_public'),
   $cassandra_server_list     = hiera('contrail_database_node_ips'),
   $cert_file                 = hiera('contrail::service_certificate',false),
   $contrail_analytics_vip    = hiera('contrail_analytics_vip',hiera('internal_api_virtual_ip')),
@@ -123,17 +112,12 @@ class tripleo::network::contrail::webui(
   $redis_ip                  = hiera('contrail::webui::redis_ip'),
 )
 {
-  if $auth_protocol == 'https' {
-    $auth_port = $auth_port_ssl_public
-  } else {
-    $auth_port = $auth_port_public
-  }
   class {'::contrail::webui':
     admin_user                => $admin_user,
     admin_password            => $admin_password,
     admin_token               => $admin_token,
     admin_tenant_name         => $admin_tenant_name,
-    auth_port                 => $auth_port,
+    auth_port                 => $auth_port_public,
     auth_protocol             => $auth_protocol,
     cassandra_ip              => $cassandra_server_list,
     cert_file                 => $cert_file,
