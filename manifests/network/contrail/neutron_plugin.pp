@@ -159,6 +159,14 @@ class tripleo::network::contrail::neutron_plugin (
     }
     $api_paste_config_file = '/usr/share/neutron/api-paste.ini'
   }
+
+  ini_setting { 'quota_driver':
+    ensure  => present,
+    path    => '/etc/neutron/neutron.conf',
+    section => 'quotas',
+    setting => 'quota_driver',
+    value   => 'neutron_plugin_contrail.plugins.opencontrail.quota.driver.QuotaDriver',
+  }
   ini_setting { 'filter:user_token':
     ensure  => present,
     path    => $api_paste_config_file,
