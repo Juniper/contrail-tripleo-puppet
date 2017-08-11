@@ -62,11 +62,6 @@
 #  Integer value.
 #  Defaults to hiera('contrail::auth_port')
 #
-# [*auth_port_ssl*]
-#  (optional) keystone ssl port.
-#  Integer value.
-#  Defaults to hiera('contrail::auth_port_ssl')
-#
 # [*auth_protocol*]
 #  (optional) authentication protocol.
 #  String value.
@@ -157,7 +152,6 @@ class tripleo::network::contrail::vrouter (
   $api_server         = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $auth_host          = hiera('contrail::auth_host'),
   $auth_port          = hiera('contrail::auth_port'),
-  $auth_port_ssl      = hiera('contrail::auth_port_ssl'),
   $auth_protocol      = hiera('contrail::auth_protocol'),
   $ca_file            = hiera('contrail::service_certificate',false),
   $cert_file          = hiera('contrail::service_certificate',false),
@@ -195,7 +189,7 @@ class tripleo::network::contrail::vrouter (
           'admin_tenant_name' => $admin_tenant_name,
           'admin_user'        => $admin_user,
           'auth_host'         => $auth_host,
-          'auth_port'         => $auth_port_ssl,
+          'auth_port'         => $auth_port,
           'auth_protocol'     => $auth_protocol,
           'insecure'          => $insecure,
           'memcached_servers' => $memcached_servers,
@@ -206,7 +200,7 @@ class tripleo::network::contrail::vrouter (
       $vnc_api_lib_config = {
         'auth' => {
           'AUTHN_SERVER'   => $auth_host,
-          'AUTHN_PORT'     => $auth_port_ssl,
+          'AUTHN_PORT'     => $auth_port,
           'AUTHN_PROTOCOL' => $auth_protocol,
           'certfile'       => $cert_file,
           'cafile'         => $ca_file,
@@ -329,6 +323,7 @@ class tripleo::network::contrail::vrouter (
         },
       }
     }
+  if $step >= 5 {
     class {'::contrail::vrouter':
       discovery_ip           => $disc_server_ip,
       gateway                => $gateway,
@@ -349,8 +344,7 @@ class tripleo::network::contrail::vrouter (
         },
       },
       vnc_api_lib_config     => $vnc_api_lib_config,
-    }
-  if $step >= 5 {
+    } ->
     class {'::contrail::vrouter::provision_vrouter':
       api_address                => $api_server,
       api_port                   => $api_port,

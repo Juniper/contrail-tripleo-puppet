@@ -68,11 +68,6 @@
 #  (optional) keystone port.
 #  Defaults to hiera('contrail::auth_port')
 #
-# [*auth_port_ssl*]
-#  (optional) keystone ssl port.
-#  Integer value.
-#  Defaults to hiera('contrail::auth_port_ssl')
-#
 # [*auth_protocol*]
 #  (optional) authentication protocol.
 #  Defaults to hiera('contrail::auth_protocol')
@@ -227,7 +222,6 @@ class tripleo::network::contrail::config(
   $auth                   = hiera('contrail::auth'),
   $auth_host              = hiera('contrail::auth_host'),
   $auth_port              = hiera('contrail::auth_port'),
-  $auth_port_ssl          = hiera('contrail::auth_port_ssl'),
   $auth_protocol          = hiera('contrail::auth_protocol'),
   $cassandra_server_list  = hiera('contrail_database_node_ips'),
   $ca_file                = hiera('contrail::service_certificate',false),
@@ -274,7 +268,7 @@ class tripleo::network::contrail::config(
         'admin_tenant_name' => $admin_tenant_name,
         'admin_user'        => $admin_user,
         'auth_host'         => $auth_host,
-        'auth_port'         => $auth_port_ssl,
+        'auth_port'         => $auth_port,
         'auth_protocol'     => $auth_protocol,
         'insecure'          => $insecure,
         'memcached_servers' => $memcached_servers,
@@ -285,7 +279,7 @@ class tripleo::network::contrail::config(
     $vnc_api_lib_config = {
       'auth' => {
         'AUTHN_SERVER'   => $auth_host,
-        'AUTHN_PORT'     => $auth_port_ssl,
+        'AUTHN_PORT'     => $auth_port,
         'AUTHN_PROTOCOL' => $auth_protocol,
         'certfile'       => $cert_file,
         'cafile'         => $ca_file,

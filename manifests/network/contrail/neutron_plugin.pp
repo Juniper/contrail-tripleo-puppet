@@ -42,11 +42,6 @@
 #  Integer value.
 #  Defaults to hiera('contrail::auth_port')
 #
-# [*auth_port_ssl*]
-#  (optional) keystone ssl port.
-#  Integer value.
-#  Defaults to hiera('contrail::auth_port_ssl')
-#
 # [*auth_protocol*]
 #  (optional) authentication protocol.
 #  String value.
@@ -118,7 +113,6 @@ class tripleo::network::contrail::neutron_plugin (
   $api_port               = hiera('contrail::api_port'),
   $auth_host              = hiera('contrail::auth_host'),
   $auth_port              = hiera('contrail::auth_port'),
-  $auth_port_ssl          = hiera('contrail::auth_port_ssl'),
   $auth_protocol          = hiera('contrail::auth_protocol'),
   $ca_file                = hiera('tripleo::haproxy::service_certificate',false),
   $cert_file              = hiera('tripleo::haproxy::service_certificate',false),
@@ -165,6 +159,14 @@ class tripleo::network::contrail::neutron_plugin (
     }
     $api_paste_config_file = '/usr/share/neutron/api-paste.ini'
   }
+
+  ini_setting { 'quota_driver':
+    ensure  => present,
+    path    => '/etc/neutron/neutron.conf',
+    section => 'quotas',
+    setting => 'quota_driver',
+    value   => 'neutron_plugin_contrail.plugins.opencontrail.quota.driver.QuotaDriver',
+  }
   ini_setting { 'filter:user_token':
     ensure  => present,
     path    => $api_paste_config_file,
@@ -188,7 +190,7 @@ class tripleo::network::contrail::neutron_plugin (
   }
 
   if $auth_protocol == 'https' {
-    $auth_url = join([$auth_protocol,'://',$auth_host,':',$auth_port_ssl,'/v2.0'])
+    $auth_url = join([$auth_protocol,'://',$auth_host,':',$auth_port,'/v2.0'])
     neutron_plugin_opencontrail {
       'APISERVER/api_server_ip':           value => $api_server;
       'APISERVER/api_server_port':         value => $api_port;
@@ -204,7 +206,7 @@ class tripleo::network::contrail::neutron_plugin (
       'keystone_authtoken/admin_password': value => $admin_password, secret =>true;
       'keystone_authtoken/auth_host':      value => $auth_host;
       'keystone_authtoken/auth_protocol':  value => $auth_protocol;
-      'keystone_authtoken/auth_port':      value => $auth_port_ssl;
+      'keystone_authtoken/auth_port':      value => $auth_port;
       'keystone_authtoken/cafile':         value => $ca_file;
       'keystone_authtoken/certfile':       value => $cert_file;
     }

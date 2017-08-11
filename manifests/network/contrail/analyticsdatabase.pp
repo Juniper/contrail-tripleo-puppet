@@ -24,11 +24,6 @@
 #  String (IPv4) value
 #  Defaults to hiera('contrail::auth_host')
 #
-# [*auth_port_ssl*]
-#  (optional) keystone ssl port.
-#  Integer value.
-#  Defaults to hiera('contrail::auth_port_ssl')
-#
 # [*auth_protocol*]
 #  (optional) authentication protocol.
 #  String value.
@@ -128,7 +123,6 @@ class tripleo::network::contrail::analyticsdatabase(
   $admin_tenant_name    = hiera('contrail::admin_tenant_name'),
   $admin_token          = hiera('contrail::admin_token'),
   $admin_user           = hiera('contrail::admin_user'),
-  $auth_port_ssl        = hiera('contrail::auth_port_ssl'),
   $auth_protocol        = hiera('contrail::auth_protocol'),
   $cassandra_servers    = hiera('contrail_analytics_database_node_ips'),
   $ca_file              = hiera('contrail::service_certificate',false),
@@ -146,7 +140,7 @@ class tripleo::network::contrail::analyticsdatabase(
     $vnc_api_lib_config = {
       'auth' => {
         'AUTHN_SERVER'   => $auth_host,
-        'AUTHN_PORT'     => $auth_port_ssl,
+        'AUTHN_PORT'     => $auth_port,
         'AUTHN_PROTOCOL' => $auth_protocol,
         'certfile'       => $cert_file,
         'cafile'         => $ca_file,
