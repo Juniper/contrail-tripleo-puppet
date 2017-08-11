@@ -2,6 +2,11 @@
 #
 # === Parameters
 #
+# [*aaa_mode*]
+#  (optional) aaa mode parameter
+#  String value.
+#  Defaults to hiera('contrail::aaa_mode')
+#
 # [*admin_password*]
 #  (optional) admin password
 #  String value.
@@ -109,6 +114,7 @@
 #   Defaults to false.
 #
 class tripleo::network::contrail::neutron_plugin (
+  $aaa_mode               = hiera('contrail::aaa_mode'),
   $contrail_extensions    = hiera('contrail::vrouter::contrail_extensions'),
   $admin_password         = hiera('contrail::admin_password'),
   $admin_tenant_name      = hiera('contrail::admin_tenant_name'),
@@ -173,19 +179,21 @@ class tripleo::network::contrail::neutron_plugin (
     setting => 'quota_driver',
     value   => 'neutron_plugin_contrail.plugins.opencontrail.quota.driver.QuotaDriver',
   }
-  ini_setting { 'filter:user_token':
-    ensure  => present,
-    path    => $api_paste_config_file,
-    section => 'filter:user_token',
-    setting => 'paste.filter_factory',
-    value   => 'neutron_plugin_contrail.plugins.opencontrail.neutron_middleware:token_factory',
-  }
-  ini_setting { 'composite:neutronapi_v2_0':
-    ensure  => present,
-    path    => $api_paste_config_file,
-    section => 'composite:neutronapi_v2_0',
-    setting => 'keystone',
-    value   => 'user_token cors http_proxy_to_wsgi request_id catch_errors authtoken keystonecontext extensions neutronapiapp_v2_0',
+  if $aaa_mode == 'rbac' {
+    ini_setting { 'filter:user_token':
+      ensure  => present,
+      path    => $api_paste_config_file,
+      section => 'filter:user_token',
+      setting => 'paste.filter_factory',
+      value   => 'neutron_plugin_contrail.plugins.opencontrail.neutron_middleware:token_factory',
+    }
+    ini_setting { 'composite:neutronapi_v2_0':
+      ensure  => present,
+      path    => $api_paste_config_file,
+      section => 'composite:neutronapi_v2_0',
+      setting => 'keystone',
+      value   => 'user_token cors http_proxy_to_wsgi request_id catch_errors authtoken keystonecontext extensions neutronapiapp_v2_0',
+    }
   }
   resources { 'neutron_plugin_opencontrail':
     purge => $purge_config,
