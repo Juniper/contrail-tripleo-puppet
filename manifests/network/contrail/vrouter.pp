@@ -106,6 +106,11 @@
 #  (optional) host IP address of vrouter
 #  String (IPv4) value.
 #  Defaults to hiera('contrail::vrouter::host_ip')
+
+# [*dpdk_driver*]
+#  (optional) dpdk driver
+#  String value.
+#  Defaults to hiera('contrail::vrouter::dpdk_driver')
 #
 # [*insecure*]
 #  (optional) insecure connections allowed
@@ -174,6 +179,7 @@ class tripleo::network::contrail::vrouter (
   $internal_vip         = hiera('internal_api_virtual_ip'),
   $is_tsn             = hiera('contrail::vrouter::is_tsn',false),
   $is_dpdk            = hiera('contrail::vrouter::is_dpdk',false),
+  $dpdk_driver        = hiera('contrail::vrouter::dpdk_driver',false),
 ) {
     $cidr = netmask_to_cidr($netmask)
     notify { 'cidr':
@@ -267,7 +273,7 @@ class tripleo::network::contrail::vrouter (
       $vrouter_agent_config = {
         'DEFAULT'  => {
           'platform'                   => 'dpdk',
-          'physical_uio_driver'        => 'uio_pci_generic',
+          'physical_uio_driver'        => $dpdk_driver,
           'physical_interface_mac'     => $macaddress,
           'physical_interface_address' => $pciaddress,
           'log_file'                   => '/var/log/contrail/contrail-vrouter-agent.log',
