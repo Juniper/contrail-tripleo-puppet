@@ -173,67 +173,75 @@ class tripleo::network::contrail::control(
 
   if $step >= 3 {
     if $contrail_version == 3 {
-      $disco = {
-        'DISCOVERY' => {
-          'port'   => $disc_server_port,
-          'server' => $disc_server_ip,
+      class {'::contrail::control':
+        contrail_version       => $contrail_version,
+        secret                 => $secret,
+        manage_named           => $manage_named,
+        control_config         => {
+          'DEFAULT'   => {
+            'hostip' => $host_ip,
+          },
+          'DISCOVERY' => {
+            'port'   => $disc_server_port,
+            'server' => $disc_server_ip,
+          },
+          'IFMAP'     => {
+            'password' => $control_ifmap_user,
+            'user'     => $control_ifmap_password,
+          },
         },
-      }
-      $ifmap = {
-        'IFMAP'     => {
-          'password' => $control_ifmap_user,
-          'user'     => $control_ifmap_password,
+        dns_config             => {
+          'DEFAULT'   => {
+            'hostip'      => $host_ip,
+            'rndc_secret' => $secret,
+          },
+          'DISCOVERY' => {
+            'port'   => $disc_server_port,
+            'server' => $disc_server_ip,
+          },
+          'IFMAP'     => {
+            'password' => $control_ifmap_user,
+            'user'     => $control_ifmap_password,
+          },
         },
+        control_nodemgr_config => {
+          'DISCOVERY' => {
+            'server'   => $disc_server_ip,
+            'port'     => $disc_server_port,
+          },
+        }
       }
-      $nodemgr_config = {
-        'DISCOVERY' => {
-          'server'   => $disc_server_ip,
-          'port'     => $disc_server_port,
-        },
-      }
-      $collectors = ''
-      $config_db = ''
     } else {
-      $disco = ''
-      $ifmap = ''
-      $nodemgr_config = {
-        'COLLECTOR' => {
-          'server_list'   => $collector_server_list_8086,
+      class {'::contrail::control':
+        contrail_version       => $contrail_version,
+        secret                 => $secret,
+        manage_named           => $manage_named,
+        control_config         => {
+          'DEFAULT'   => {
+            'hostip'     => $host_ip,
+            'collectors' => $collector_server_list_8086,
+          },
+          'CONFIGDB'   => {
+            'rabbitmq_server_list' => $rabbit_server_list_5672,
+            'rabbitmq_user' => $rabbit_user,
+            'rabbitmq_password' => $rabbit_password,
+            'rabbitmq_vhost' => '/',
+            'rabbitmq_use_ssl' => 'False',
+            'config_db_server_list' => $config_db_server_list_9041,
+          },
+        },
+        dns_config             => {
+          'DEFAULT'   => {
+            'hostip'      => $host_ip,
+            'rndc_secret' => $secret,
+          },
+        },
+        control_nodemgr_config => {
+          'COLLECTOR' => {
+            'server_list'   => $collector_server_list_8086,
+          },
         },
       }
-      $collectors = $collector_server_list_8086
-      $config_db = {
-        'CONFIGDB'   => {
-          'rabbitmq_server_list' => $rabbit_server_list_5672,
-          'rabbitmq_user' => $rabbit_user,
-          'rabbitmq_password' => $rabbit_password,
-          'rabbitmq_vhost' => '/',
-          'rabbitmq_use_ssl' => 'False',
-          'config_db_server_list' => $config_db_server_list_9041,
-        },
-      }
-    }
-    class {'::contrail::control':
-      secret                 => $secret,
-      manage_named           => $manage_named,
-      control_config         => {
-        'DEFAULT'   => {
-          'hostip' => $host_ip,
-          $collectors,
-        },
-        $disco,
-        $ifmap,
-        $config_db,
-      },
-      dns_config             => {
-        'DEFAULT'   => {
-          'hostip'      => $host_ip,
-          'rndc_secret' => $secret,
-        },
-        $disco,
-        $ifmap,
-      },
-      control_nodemgr_config => $nodemgr_config,
     }
   }
   if $step >= 5 {
