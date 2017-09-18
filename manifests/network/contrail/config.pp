@@ -319,8 +319,8 @@ class tripleo::network::contrail::config(
     }
   }
   if $step >= 3 {
-    class {'::contrail::config':
-      if $contrail_version == 3 {
+    if $contrail_version == 3 {
+      class {'::contrail::config':
         api_config              => {
           'DEFAULTS' => {
             'aaa_mode'              => $aaa_mode,
@@ -403,7 +403,9 @@ class tripleo::network::contrail::config(
           },
         },
         vnc_api_lib_config      => $vnc_api_lib_config,
-      } else {
+      }
+    } else {
+      class {'::contrail::config':
         api_config              => {
           'DEFAULTS' => {
             'aaa_mode'              => $aaa_mode,
