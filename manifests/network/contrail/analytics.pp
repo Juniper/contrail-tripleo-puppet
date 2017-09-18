@@ -378,7 +378,6 @@ class tripleo::network::contrail::analytics(
         redis_config             => $redis_config,
         topology_config          => {
           'DEFAULTS'  => {
-            'collectors' => $collectors
             'zookeeper'  => $zk_server_ip_2181_comma,
           },
           'DISCOVERY' => {
