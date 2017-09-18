@@ -321,7 +321,7 @@ class tripleo::network::contrail::config(
   if $step >= 3 {
     if $contrail_version == 3 {
       class {'::contrail::config':
-        contrail_version        => $contrail_version.
+        contrail_version        => $contrail_version,
         api_config              => {
           'DEFAULTS' => {
             'aaa_mode'              => $aaa_mode,
@@ -407,7 +407,7 @@ class tripleo::network::contrail::config(
       }
     } else {
       class {'::contrail::config':
-        contrail_version        => $contrail_version.
+        contrail_version        => $contrail_version,
         api_config              => {
           'DEFAULTS' => {
             'aaa_mode'              => $aaa_mode,
