@@ -443,7 +443,7 @@ class tripleo::network::contrail::analytics(
             'port' => $collector_sandesh_port,
           },
           'STRUCTURED_SYSLOG_COLLECTOR' => {
-          'kafka_broker_list' => $kafka_broker_list,
+            'kafka_broker_list' => $kafka_broker_list_9092,
           },
           'REDIS'     => {
             'port'   => $redis_server_port,
