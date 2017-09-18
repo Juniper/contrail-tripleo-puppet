@@ -188,191 +188,182 @@ class tripleo::network::contrail::vrouter (
   $is_dpdk               = hiera('contrail::vrouter::is_dpdk',false),
   $dpdk_driver           = hiera('contrail::vrouter::dpdk_driver',false),
 ) {
-    $cidr = netmask_to_cidr($netmask)
-    $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
-    if size($control_server) == 0 {
-      $control_server_list = ''
-    } else {
-      $control_server_list = join($control_server, ' ')
+  $cidr = netmask_to_cidr($netmask)
+  $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
+  if size($control_server) == 0 {
+    $control_server_list = ''
+  } else {
+    $control_server_list = join($control_server, ' ')
+  }
+  if $contrail_version == 3 {
+    $disco = {
+      'port'   => $disc_server_port,
+      'server' => $disc_server_ip,
     }
-    if $contrail_version == 3 {
-      $disco = {
-        'DISCOVERY' => {
-          'port'   => $disc_server_port,
-          'server' => $disc_server_ip,
-        },
-      }
-      $ifmap = {
-        'IFMAP'     => {
-          'password' => $control_ifmap_user,
-          'user'     => $control_ifmap_password,
-        },
-      }
-      $nodemgr_config = {
-        'DISCOVERY' => {
-          'server'   => $disc_server_ip,
-          'port'     => $disc_server_port,
-        },
-      }
-      $collectors = ''
-    } else {
-      $disco = ''
-      $ifmap = ''
-      $nodemgr_config = {
-        'COLLECTOR' => {
-          'server_list'   => $collector_server_list_8086,
-        },
-      }
-      $collectors = $collector_server_list_8086
+    $nodemgr_config = {
+      'DISCOVERY' => $disco,
     }
-    if $auth_protocol == 'https' {
-      $keystone_config = {
-        'KEYSTONE' => {
-          'admin_password'    => $admin_password,
-          'admin_tenant_name' => $admin_tenant_name,
-          'admin_user'        => $admin_user,
-          'auth_host'         => $auth_host,
-          'auth_port'         => $auth_port_ssl,
-          'auth_protocol'     => $auth_protocol,
-          'insecure'          => $insecure,
-          'memcached_servers' => $memcached_servers,
-          'certfile'          => $cert_file,
-          'cafile'            => $ca_file,
-        },
-      }
-      $vnc_api_lib_config = {
-        'auth' => {
-          'AUTHN_SERVER'   => $auth_host,
-          'AUTHN_PORT'     => $auth_port_ssl,
-          'AUTHN_PROTOCOL' => $auth_protocol,
-          'certfile'       => $cert_file,
-          'cafile'         => $ca_file,
-        },
-      }
-    } else {
-      $keystone_config = {
-        'KEYSTONE' => {
-          'admin_password'    => $admin_password,
-          'admin_tenant_name' => $admin_tenant_name,
-          'admin_user'        => $admin_user,
-          'auth_host'         => $auth_host,
-          'auth_port'         => $auth_port,
-          'auth_protocol'     => $auth_protocol,
-          'insecure'          => $insecure,
-          'memcached_servers' => $memcached_servers,
-        },
-      }
-      $vnc_api_lib_config = {
-        'auth' => {
-          'AUTHN_SERVER' => $auth_host,
-        },
-      }
+    $collectors = ''
+  } else {
+    $disco = {}
+    $nodemgr_config = {
+      'COLLECTOR' => {
+        'server_list'   => $collector_server_list_8086,
+      },
     }
-    if $is_tsn {
-      $macaddress = inline_template("<%= scope.lookupvar('::macaddress_${physical_interface}') -%>")
-      $vrouter_agent_config = {
-        'DEFAULT'  => {
-          'agent_mode' => 'tsn',
-        },
-        'DNS'  => {
-          'server' => $control_server_list,
-        },
-        'CONTROL-NODE'  => {
-          'server' => $control_server_list,
-        },
-        'NETWORKS'  => {
-          'control_network_ip' => $host_ip,
-        },
-        'VIRTUAL-HOST-INTERFACE'  => {
-          'compute_node_address' => $host_ip,
-          'gateway'              => $gateway,
-          'ip'                   => "${host_ip}/${cidr}",
-          'name'                 => 'vhost0',
-          'physical_interface'   => $physical_interface,
-        },
-        'METADATA' => {
-          'metadata_proxy_secret' => $metadata_secret,
-        },
-        $disco,
-      }
-    } elsif $is_dpdk {
-      $pciaddress = generate('/bin/cat','/etc/contrail/dpdk_pci')
-      $macaddress = generate('/bin/cat','/etc/contrail/dpdk_mac')
-      $vrouter_agent_config = {
-        'DEFAULT'  => {
-          'platform'                   => 'dpdk',
-          'physical_uio_driver'        => $dpdk_driver,
-          'physical_interface_mac'     => $macaddress,
-          'physical_interface_address' => $pciaddress,
-          'log_file'                   => '/var/log/contrail/contrail-vrouter-agent.log',
-          'log_level'                  => 'log_level',
-          'log_local'                  => '1',
-        },
-        'DNS'  => {
-          'server' => $control_server_list,
-        },
-        'CONTROL-NODE'  => {
-          'server' => $control_server_list,
-        },
-        'NETWORKS'  => {
-          'control_network_ip' => $host_ip,
-        },
-        'VIRTUAL-HOST-INTERFACE'  => {
-          'compute_node_address' => $host_ip,
-          'gateway'              => $gateway,
-          'ip'                   => "${host_ip}/${cidr}",
-          'name'                 => 'vhost0',
-          'physical_interface'   => $physical_interface,
-        },
-        'METADATA' => {
-          'metadata_proxy_secret' => $metadata_secret,
-        },
-        $disco,
-        'SERVICE-INSTANCE' => {
-          'netns_command' => '/usr/bin/opencontrail-vrouter-netns',
-        },
-      }
-    } else {
-      $macaddress = inline_template("<%= scope.lookupvar('::macaddress_${physical_interface}') -%>")
-      $vrouter_agent_config = {
-        'DNS'  => {
-          'server' => $control_server_list,
-        },
-        'CONTROL-NODE'  => {
-          'server' => $control_server_list,
-        },
-        'NETWORKS'  => {
-          'control_network_ip' => $host_ip,
-        },
-        'VIRTUAL-HOST-INTERFACE'  => {
-          'compute_node_address' => $host_ip,
-          'gateway'              => $gateway,
-          'ip'                   => "${host_ip}/${cidr}",
-          'name'                 => 'vhost0',
-          'physical_interface'   => $physical_interface,
-        },
-        'METADATA' => {
-          'metadata_proxy_secret' => $metadata_secret,
-        },
-        $disco,
-      }
+    $collectors = $collector_server_list_8086
+  }
+  if $auth_protocol == 'https' {
+    $keystone_config = {
+      'KEYSTONE' => {
+        'admin_password'    => $admin_password,
+        'admin_tenant_name' => $admin_tenant_name,
+        'admin_user'        => $admin_user,
+        'auth_host'         => $auth_host,
+        'auth_port'         => $auth_port_ssl,
+        'auth_protocol'     => $auth_protocol,
+        'insecure'          => $insecure,
+        'memcached_servers' => $memcached_servers,
+        'certfile'          => $cert_file,
+        'cafile'            => $ca_file,
+      },
     }
+    $vnc_api_lib_config = {
+      'auth' => {
+        'AUTHN_SERVER'   => $auth_host,
+        'AUTHN_PORT'     => $auth_port_ssl,
+        'AUTHN_PROTOCOL' => $auth_protocol,
+        'certfile'       => $cert_file,
+        'cafile'         => $ca_file,
+      },
+    }
+  } else {
+    $keystone_config = {
+      'KEYSTONE' => {
+        'admin_password'    => $admin_password,
+        'admin_tenant_name' => $admin_tenant_name,
+        'admin_user'        => $admin_user,
+        'auth_host'         => $auth_host,
+        'auth_port'         => $auth_port,
+        'auth_protocol'     => $auth_protocol,
+        'insecure'          => $insecure,
+        'memcached_servers' => $memcached_servers,
+      },
+    }
+    $vnc_api_lib_config = {
+      'auth' => {
+        'AUTHN_SERVER' => $auth_host,
+      },
+    }
+  }
+  if $is_tsn {
+    $macaddress = inline_template("<%= scope.lookupvar('::macaddress_${physical_interface}') -%>")
+    $vrouter_agent_config = {
+      'DEFAULT'  => {
+        'agent_mode' => 'tsn',
+      },
+      'DNS'  => {
+        'server' => $control_server_list,
+      },
+      'CONTROL-NODE'  => {
+        'server' => $control_server_list,
+      },
+      'NETWORKS'  => {
+        'control_network_ip' => $host_ip,
+      },
+      'VIRTUAL-HOST-INTERFACE'  => {
+        'compute_node_address' => $host_ip,
+        'gateway'              => $gateway,
+        'ip'                   => "${host_ip}/${cidr}",
+        'name'                 => 'vhost0',
+        'physical_interface'   => $physical_interface,
+      },
+      'METADATA' => {
+        'metadata_proxy_secret' => $metadata_secret,
+      },
+      'DISCOVERY' => $disco,
+    }
+  } elsif $is_dpdk {
+    $pciaddress = generate('/bin/cat','/etc/contrail/dpdk_pci')
+    $macaddress = generate('/bin/cat','/etc/contrail/dpdk_mac')
+    $vrouter_agent_config = {
+      'DEFAULT'  => {
+        'platform'                   => 'dpdk',
+        'physical_uio_driver'        => $dpdk_driver,
+        'physical_interface_mac'     => $macaddress,
+        'physical_interface_address' => $pciaddress,
+        'log_file'                   => '/var/log/contrail/contrail-vrouter-agent.log',
+        'log_level'                  => 'log_level',
+        'log_local'                  => '1',
+      },
+      'DNS'  => {
+        'server' => $control_server_list,
+      },
+      'CONTROL-NODE'  => {
+        'server' => $control_server_list,
+      },
+      'NETWORKS'  => {
+        'control_network_ip' => $host_ip,
+      },
+      'VIRTUAL-HOST-INTERFACE'  => {
+        'compute_node_address' => $host_ip,
+        'gateway'              => $gateway,
+        'ip'                   => "${host_ip}/${cidr}",
+        'name'                 => 'vhost0',
+        'physical_interface'   => $physical_interface,
+      },
+      'METADATA' => {
+        'metadata_proxy_secret' => $metadata_secret,
+      },
+      'DISCOVERY' => $disco,
+      'SERVICE-INSTANCE' => {
+        'netns_command' => '/usr/bin/opencontrail-vrouter-netns',
+      },
+    }
+  } else {
+    $macaddress = inline_template("<%= scope.lookupvar('::macaddress_${physical_interface}') -%>")
+    $vrouter_agent_config = {
+      'DNS'  => {
+        'server' => $control_server_list,
+      },
+      'CONTROL-NODE'  => {
+        'server' => $control_server_list,
+      },
+      'NETWORKS'  => {
+        'control_network_ip' => $host_ip,
+      },
+      'VIRTUAL-HOST-INTERFACE'  => {
+        'compute_node_address' => $host_ip,
+        'gateway'              => $gateway,
+        'ip'                   => "${host_ip}/${cidr}",
+        'name'                 => 'vhost0',
+        'physical_interface'   => $physical_interface,
+      },
+      'METADATA' => {
+        'metadata_proxy_secret' => $metadata_secret,
+      },
+      'DISCOVERY' => $disco,
+    }
+  }
+  if $step >= 4 {
     class {'::contrail::vrouter':
-      discovery_ip           => $disc_server_ip,
-      gateway                => $gateway,
-      host_ip                => $host_ip,
-      is_tsn                 => $is_tsn,
-      is_dpdk                => $is_dpdk,
-      macaddr                => $macaddress,
-      mask                   => $cidr,
-      netmask                => $netmask,
-      physical_interface     => $physical_interface,
-      vhost_ip               => $host_ip,
-      keystone_config        => $keystone_config,
-      vrouter_agent_config   => $vrouter_agent_config,
-      vrouter_nodemgr_config => $nodemgr_config,
-      vnc_api_lib_config     => $vnc_api_lib_config,
+        contrail_version       => $contrail_version,
+        discovery_ip           => $disc_server_ip,
+        gateway                => $gateway,
+        host_ip                => $host_ip,
+        is_tsn                 => $is_tsn,
+        is_dpdk                => $is_dpdk,
+        macaddr                => $macaddress,
+        mask                   => $cidr,
+        netmask                => $netmask,
+        physical_interface     => $physical_interface,
+        vhost_ip               => $host_ip,
+        keystone_config        => $keystone_config,
+        vrouter_agent_config   => $vrouter_agent_config,
+        vrouter_nodemgr_config => $nodemgr_config,
+        vnc_api_lib_config     => $vnc_api_lib_config,
     }
+  }
   if $step >= 5 {
     class {'::contrail::vrouter::provision_vrouter':
       api_address                => $api_server,
