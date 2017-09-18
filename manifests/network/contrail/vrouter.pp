@@ -42,6 +42,11 @@
 #  String value.
 #  Defaults to hiera('contrail::admin_user')
 #
+# [*analytics_server_list*]
+#  (optional) list of analytics server
+#  Array of String values.
+#  Defaults to hiera('contrail_analytics_node_ips')
+#
 # [*api_server*]
 #  (optional) IP address of api server
 #  String value.
@@ -153,46 +158,72 @@
 #  Defaults to hiera('contrail::vrouter::is_dpdk',false)
 #
 class tripleo::network::contrail::vrouter (
-  $step               = hiera('step'),
-  $admin_password     = hiera('contrail::admin_password'),
-  $admin_tenant_name  = hiera('contrail::admin_tenant_name'),
-  $admin_token        = hiera('contrail::admin_token'),
-  $admin_user         = hiera('contrail::admin_user'),
-  $api_port           = hiera('contrail::api_port'),
-  $api_server         = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $auth_host          = hiera('contrail::auth_host'),
-  $auth_port          = hiera('contrail::auth_port'),
-  $auth_port_ssl      = hiera('contrail::auth_port_ssl'),
-  $auth_protocol      = hiera('contrail::auth_protocol'),
-  $ca_file            = hiera('contrail::service_certificate',false),
-  $cert_file          = hiera('contrail::service_certificate',false),
-  $control_server     = hiera('contrail::vrouter::control_node_ips'),
-  $disc_server_ip     = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $disc_server_port   = hiera('contrail::disc_server_port'),
-  $gateway            = hiera('contrail::vrouter::gateway'),
-  $host_ip            = hiera('contrail::vrouter::host_ip'),
-  $insecure           = hiera('contrail::insecure'),
-  $memcached_servers  = hiera('contrail::memcached_server'),
-  $metadata_secret    = hiera('contrail::vrouter::metadata_proxy_shared_secret'),
-  $netmask            = hiera('contrail::vrouter::netmask'),
-  $physical_interface = hiera('contrail::vrouter::physical_interface'),
-  $internal_vip         = hiera('internal_api_virtual_ip'),
-  $is_tsn             = hiera('contrail::vrouter::is_tsn',false),
-  $is_dpdk            = hiera('contrail::vrouter::is_dpdk',false),
-  $dpdk_driver        = hiera('contrail::vrouter::dpdk_driver',false),
+  $step                  = hiera('step'),
+  $admin_password        = hiera('contrail::admin_password'),
+  $admin_tenant_name     = hiera('contrail::admin_tenant_name'),
+  $admin_token           = hiera('contrail::admin_token'),
+  $admin_user            = hiera('contrail::admin_user'),
+  $analytics_server_list = hiera('contrail_analytics_node_ips',hiera('contrail::vrouter::analytics_node_ips')),
+  $api_port              = hiera('contrail::api_port'),
+  $api_server            = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $auth_host             = hiera('contrail::auth_host'),
+  $auth_port             = hiera('contrail::auth_port'),
+  $auth_port_ssl         = hiera('contrail::auth_port_ssl'),
+  $auth_protocol         = hiera('contrail::auth_protocol'),
+  $ca_file               = hiera('contrail::service_certificate',false),
+  $cert_file             = hiera('contrail::service_certificate',false),
+  $contrail_version      = hiera('contrail::version',4),
+  $control_server        = hiera('contrail_config_node_ips',hiera('contrail::vrouter::control_node_ips')),
+  $disc_server_ip        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $disc_server_port      = hiera('contrail::disc_server_port'),
+  $gateway               = hiera('contrail::vrouter::gateway'),
+  $host_ip               = hiera('contrail::vrouter::host_ip'),
+  $insecure              = hiera('contrail::insecure'),
+  $memcached_servers     = hiera('contrail::memcached_server'),
+  $metadata_secret       = hiera('contrail::vrouter::metadata_proxy_shared_secret'),
+  $netmask               = hiera('contrail::vrouter::netmask'),
+  $physical_interface    = hiera('contrail::vrouter::physical_interface'),
+  $internal_vip          = hiera('internal_api_virtual_ip'),
+  $is_tsn                = hiera('contrail::vrouter::is_tsn',false),
+  $is_dpdk               = hiera('contrail::vrouter::is_dpdk',false),
+  $dpdk_driver           = hiera('contrail::vrouter::dpdk_driver',false),
 ) {
     $cidr = netmask_to_cidr($netmask)
-    notify { 'cidr':
-      message => $cidr,
-    }
-    #include ::contrail::vrouter
-    # NOTE: it's not possible to use this class without a functional
-    # contrail controller up and running
+    $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],
     if size($control_server) == 0 {
-      #$control_server_list = join(hiera('contrail_control_node_ips'), ' ')
       $control_server_list = ''
     } else {
       $control_server_list = join($control_server, ' ')
+    }
+    if $contrail_version == 3 {
+      $disco = {
+        'DISCOVERY' => {
+          'port'   => $disc_server_port,
+          'server' => $disc_server_ip,
+        },
+      }
+      $ifmap = {
+        'IFMAP'     => {
+          'password' => $control_ifmap_user,
+          'user'     => $control_ifmap_password,
+        },
+      }
+      $nodemgr_config = {
+        'DISCOVERY' => {
+          'server'   => $disc_server_ip,
+          'port'     => $disc_server_port,
+        },
+      }
+      $collectors = ''
+    } else {
+      $disco = ''
+      $ifmap = ''
+      $nodemgr_config = {
+        'COLLECTOR' => {
+          'server_list'   => $collector_server_list_8086,
+        },
+      }
+      $collectors = $collector_server_list_8086
     }
     if $auth_protocol == 'https' {
       $keystone_config = {
@@ -219,7 +250,7 @@ class tripleo::network::contrail::vrouter (
         },
       }
     } else {
-    $keystone_config = {
+      $keystone_config = {
         'KEYSTONE' => {
           'admin_password'    => $admin_password,
           'admin_tenant_name' => $admin_tenant_name,
@@ -262,10 +293,7 @@ class tripleo::network::contrail::vrouter (
         'METADATA' => {
           'metadata_proxy_secret' => $metadata_secret,
         },
-        'DISCOVERY' => {
-          'server' => $disc_server_ip,
-          'port'   => $disc_server_port,
-        },
+        $disco,
       }
     } elsif $is_dpdk {
       $pciaddress = generate('/bin/cat','/etc/contrail/dpdk_pci')
@@ -299,10 +327,7 @@ class tripleo::network::contrail::vrouter (
         'METADATA' => {
           'metadata_proxy_secret' => $metadata_secret,
         },
-        'DISCOVERY' => {
-          'server' => $disc_server_ip,
-          'port'   => $disc_server_port,
-        },
+        $disco,
         'SERVICE-INSTANCE' => {
           'netns_command' => '/usr/bin/opencontrail-vrouter-netns',
         },
@@ -329,10 +354,7 @@ class tripleo::network::contrail::vrouter (
         'METADATA' => {
           'metadata_proxy_secret' => $metadata_secret,
         },
-        'DISCOVERY' => {
-          'server' => $disc_server_ip,
-          'port'   => $disc_server_port,
-        },
+        $disco,
       }
     }
     class {'::contrail::vrouter':
@@ -348,12 +370,7 @@ class tripleo::network::contrail::vrouter (
       vhost_ip               => $host_ip,
       keystone_config        => $keystone_config,
       vrouter_agent_config   => $vrouter_agent_config,
-      vrouter_nodemgr_config => {
-        'DISCOVERY' => {
-          'server' => $disc_server_ip,
-          'port'   => $disc_server_port,
-        },
-      },
+      vrouter_nodemgr_config => $nodemgr_config,
       vnc_api_lib_config     => $vnc_api_lib_config,
     }
   if $step >= 5 {

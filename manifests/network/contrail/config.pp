@@ -45,6 +45,11 @@
 #  String value.
 #  Defaults to hiera('contrail::admin_user')
 #
+# [*analytics_server_list*]
+#  (optional) list of analytics server
+#  Array of String values.
+#  Defaults to hiera('contrail_analytics_node_ips')
+#
 # [*api_server*]
 #  (optional) VIP of Config API
 #  String (IPv4) value.
@@ -222,6 +227,7 @@ class tripleo::network::contrail::config(
   $admin_tenant_name      = hiera('contrail::admin_tenant_name'),
   $admin_token            = hiera('contrail::admin_token'),
   $admin_user             = hiera('contrail::admin_user'),
+  $analytics_server_list  = hiera('contrail_analytics_node_ips'),
   $api_server             = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $api_port               = hiera('contrail::api_port'),
   $auth                   = hiera('contrail::auth'),
@@ -234,12 +240,13 @@ class tripleo::network::contrail::config(
   $cert_file              = hiera('contrail::service_certificate',false),
   $config_hostnames       = hiera('contrail_config_short_node_names'),
   $control_server_list    = hiera('contrail_control_node_ips'),
+  $contrail_version       = hiera('contrail::version',4),
   $disc_server_ip         = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port       = hiera('contrail::disc_server_port'),
   $host_ip                = hiera('contrail::config::host_ip'),
-  $ifmap_password         = hiera('contrail::config::ifmap_password'),
+  $ifmap_password         = hiera('contrail::config::ifmap_password',false),
   $ifmap_server_ip        = hiera('contrail::config::host_ip'),
-  $ifmap_username         = hiera('contrail::config::ifmap_username'),
+  $ifmap_username         = hiera('contrail::config::ifmap_username',false),
   $insecure               = hiera('contrail::insecure'),
   $ipfabric_service_port  = 8775,
   $listen_ip_address      = hiera('contrail::config::listen_ip_address'),
@@ -248,7 +255,7 @@ class tripleo::network::contrail::config(
   $linklocal_service_name = 'metadata',
   $linklocal_service_ip   = '169.254.169.254',
   $memcached_servers      = hiera('contrail::memcached_server'),
-  $internal_vip             = hiera('internal_api_virtual_ip'),
+  $internal_vip            = hiera('internal_api_virtual_ip'),
   $rabbit_server          = hiera('rabbitmq_node_ips'),
   $rabbit_user            = hiera('contrail::rabbit_user'),
   $rabbit_password        = hiera('contrail::rabbit_password'),
@@ -264,6 +271,7 @@ class tripleo::network::contrail::config(
   $basicauthusers_property_dns = $control_server_list.map |$item| { "${item}.dns:${item}.dns" }
   $basicauthusers_property = concat($basicauthusers_property_control, $basicauthusers_property_dns)
   $cassandra_server_list_9160 = join([join($cassandra_server_list, ':9160 '),':9160'],'')
+  $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],''
   $rabbit_server_list_5672 = join([join($rabbit_server, ':5672,'),':5672'],'')
   $zk_server_ip_2181 = join([join($zk_server_ip, ':2181,'),':2181'],'')
 
@@ -311,16 +319,44 @@ class tripleo::network::contrail::config(
     }
   }
   if $step >= 3 {
+    if $contrail_version == 3 {
+      $ifmap = {
+        'ifmap_password'  => $ifmap_password,
+        'ifmap_server_ip' => $ifmap_server_ip,
+        'ifmap_username'  => $ifmap_username,
+      }
+      $disco = {
+        'disc_server_ip'   => $disc_server_ip,
+        'disc_server_port' => $disc_server_port,
+      }
+      $collectors = ''
+      $nodemgr_config = {
+        'DISCOVERY' => {
+          'server'   => $disc_server_ip,
+          'port'     => $disc_server_port,
+        },
+      }
+    } else {
+      $ifmap = ''
+      $disco = ''
+      $collectors = {
+        'collectors' => $collector_server_list_8086,
+      }
+      $nodemgr_config = {
+        'COLLECTOR' => {
+          'server_list'   => $collector_server_list_8086,
+        },
+      }
+    }
     class {'::contrail::config':
       api_config              => {
         'DEFAULTS' => {
           'aaa_mode'              => $aaa_mode,
           'auth'                  => $auth,
           'cassandra_server_list' => $cassandra_server_list_9160,
-          'disc_server_ip'        => $disc_server_ip,
-          'ifmap_password'        => $ifmap_password,
-          'ifmap_server_ip'       => $ifmap_server_ip,
-          'ifmap_username'        => $ifmap_username,
+          $disco,
+          $ifmap,
+          $collectors,
           'listen_ip_addr'        => $listen_ip_address,
           'listen_port'           => $listen_port,
           'rabbit_server'         => $rabbit_server_list_5672,
@@ -331,19 +367,14 @@ class tripleo::network::contrail::config(
         },
       },
       basicauthusers_property => $basicauthusers_property,
-      config_nodemgr_config   => {
-        'DISCOVERY' => {
-          'server' => $disc_server_ip,
-          'port'   => $disc_server_port,
-        },
-      },
+      config_nodemgr_config   => $nodemgr_config,
       device_manager_config   => {
         'DEFAULTS' => {
           'api_server_ip'         => $api_server,
           'api_server_port'       => $api_port,
           'cassandra_server_list' => $cassandra_server_list_9160,
-          'disc_server_ip'        => $disc_server_ip,
-          'disc_server_port'      => $disc_server_port,
+          $disco,
+          $collectors,
           'rabbit_server'         => $rabbit_server_list_5672,
           'rabbit_user'           => $rabbit_user,
           'rabbit_password'       => $rabbit_password,
@@ -363,11 +394,9 @@ class tripleo::network::contrail::config(
           'api_server_ip'         => $api_server,
           'api_server_port'       => $api_port,
           'cassandra_server_list' => $cassandra_server_list_9160,
-          'disc_server_ip'        => $disc_server_ip,
-          'disc_server_port'      => $disc_server_port,
-          'ifmap_password'        => $ifmap_password,
-          'ifmap_server_ip'       => $ifmap_server_ip,
-          'ifmap_username'        => $ifmap_username,
+          $disco,
+          $ifmap,
+          $collectors,
           'rabbit_server'         => $rabbit_server_list_5672,
           'rabbit_user'           => $rabbit_user,
           'rabbit_password'       => $rabbit_password,
@@ -380,11 +409,9 @@ class tripleo::network::contrail::config(
           'api_server_ip'         => $api_server,
           'api_server_port'       => $api_port,
           'cassandra_server_list' => $cassandra_server_list_9160,
-          'disc_server_ip'        => $disc_server_ip,
-          'disc_server_port'      => $disc_server_port,
-          'ifmap_password'        => $ifmap_password,
-          'ifmap_server_ip'       => $ifmap_server_ip,
-          'ifmap_username'        => $ifmap_username,
+          $disco,
+          $ifmap,
+          $collectors,
           'rabbit_server'         => $rabbit_server_list_5672,
           'rabbit_user'           => $rabbit_user,
           'rabbit_password'       => $rabbit_password,
