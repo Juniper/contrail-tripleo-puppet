@@ -389,13 +389,13 @@ class tripleo::network::contrail::analytics(
         keystone_config          => {
           'KEYSTONE'     => $keystone_config,
         },
-      }    
+      }
     } else {
       class {'::contrail::analytics':
         contrail_version         => $contrail_version,
         alarm_gen_config         => {
           'DEFAULTS'  => {
-            'collectors'           => $collectors,
+            'collectors'           => $collector_server_list_8086,
             'host_ip'              => $host_ip,
             'kafka_broker_list'    => $kafka_broker_list_9092,
             'rabbitmq_server_list' => $rabbit_server_list_no_port,
@@ -403,6 +403,9 @@ class tripleo::network::contrail::analytics(
             'rabbitmq_user'        => $rabbit_user,
             'rabbitmq_password'    => $rabbit_password,
             'zk_list'              => $zk_server_ip_2181,
+          },
+          'API_SERVER' => {
+            'api_server_list' => $config_api_server_list_8082,
           },
         },
         analytics_nodemgr_config => {
@@ -415,11 +418,12 @@ class tripleo::network::contrail::analytics(
             'api_server'            => $api_server,
             'aaa_mode'              => $analytics_aaa_mode,
             'cassandra_server_list' => $cassandra_server_list_9042,
-            'collectors'            => $collectors,
+            'collectors'            => $collector_server_list_8086,
             'host_ip'               => $host_ip,
             'http_server_port'      => $http_server_port,
             'rest_api_ip'           => $rest_api_ip,
             'rest_api_port'         => $rest_api_port,
+            'api_server'            => $config_api_server_list_8082,
           },
           'REDIS'     => {
             'redis_server_port' => $redis_server_port,
@@ -452,7 +456,7 @@ class tripleo::network::contrail::analytics(
         },
         query_engine_config      => {
           'DEFAULT'   => {
-            'collectors'            => $collectors,
+            'collectors'            => $collector_server_list_8086,
             'cassandra_server_list' => $cassandra_server_list_9042,
             'hostip'                => $host_ip,
           },
@@ -463,16 +467,22 @@ class tripleo::network::contrail::analytics(
         },
         snmp_collector_config    => {
           'DEFAULTS'  => {
-            'collectors' => $collectors,
+            'collectors' => $collector_server_list_8086,
             'zookeeper'  => $zk_server_ip_2181_comma,
           },
           'KEYSTONE'  => $keystone_config,
+          'API_SERVER' => {
+            'api_server_list' => $config_api_server_list_8082,
+          },
         },
         redis_config             => $redis_config,
         topology_config          => {
           'DEFAULTS'  => {
-            'collectors' => $collectors,
+            'collectors' => $collector_server_list_8086,
             'zookeeper'  => $zk_server_ip_2181_comma,
+          },
+          'API_SERVER' => {
+            'api_server_list' => $config_api_server_list_8082,
           },
         },
         vnc_api_lib_config       => $vnc_api_lib_config,
