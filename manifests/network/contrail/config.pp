@@ -346,7 +346,7 @@ class tripleo::network::contrail::config(
             'server'   => $disc_server_ip,
             'port'     => $disc_server_port,
           },
-        }
+        },
         device_manager_config   => {
           'DEFAULTS' => {
             'api_server_ip'         => $api_server,
@@ -425,7 +425,7 @@ class tripleo::network::contrail::config(
           'COLLECTOR' => {
             'server_list'   => $collector_server_list_8086,
           },
-        }
+        },
         device_manager_config   => {
           'DEFAULTS' => {
             'api_server_ip'         => $api_server,
