@@ -189,7 +189,7 @@ class tripleo::network::contrail::vrouter (
   $dpdk_driver           = hiera('contrail::vrouter::dpdk_driver',false),
 ) {
     $cidr = netmask_to_cidr($netmask)
-    $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],
+    $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
     if size($control_server) == 0 {
       $control_server_list = ''
     } else {

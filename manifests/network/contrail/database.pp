@@ -130,7 +130,7 @@ class tripleo::network::contrail::database(
   $zookeeper_server_ips  = hiera('contrail_database_node_ips'),
 )
 {
-  $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],''
+  $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
   if $step == 2 {
     if $contrail_version == 3 {
       $nodemgr_config = {
