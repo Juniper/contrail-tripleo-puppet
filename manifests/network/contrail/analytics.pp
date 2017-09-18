@@ -287,132 +287,204 @@ class tripleo::network::contrail::analytics(
   }
   if $step >= 3 {
     if $contrail_version == 3 {
-      $nodemgr_config = {
-        'DISCOVERY' => {
-          'server'   => $disc_server_ip,
-          'port'     => $disc_server_port,
+      class {'::contrail::analytics':
+        contrail_version         => $contrail_version,
+        alarm_gen_config         => {
+          'DEFAULTS'  => {
+            'collectors'           => $collectors,
+            'host_ip'              => $host_ip,
+            'kafka_broker_list'    => $kafka_broker_list_9092,
+            'rabbitmq_server_list' => $rabbit_server_list_no_port,
+            'rabbitmq_port'        => '5672',
+            'rabbitmq_user'        => $rabbit_user,
+            'rabbitmq_password'    => $rabbit_password,
+            'zk_list'              => $zk_server_ip_2181,
+          },
+          'DISCOVERY' => {
+            'server'   => $disc_server_ip,
+            'port'     => $disc_server_port,
+          },
         },
-      }
-      $disco_config = {
-        'DISCOVERY' => {
-          'disc_server_ip'   => $disc_server_ip,
-          'disc_server_port' => $disc_server_port,
+        analytics_nodemgr_config => {
+          'DISCOVERY' => {
+            'server'   => $disc_server_ip,
+            'port'     => $disc_server_port,
+          },
         },
-      }
-      $collectors = ''
-      $api_server = "${api_server}:${api_port}"
-      $collector_api_server = ''
-      $collector_structured_syslog_collector = ''
+        analytics_api_config     => {
+          'DEFAULTS'  => {
+            'api_server'            => $api_server,
+            'aaa_mode'              => $analytics_aaa_mode,
+            'cassandra_server_list' => $cassandra_server_list_9042,
+            'collectors'            => $collectors,
+            'host_ip'               => $host_ip,
+            'http_server_port'      => $http_server_port,
+            'rest_api_ip'           => $rest_api_ip,
+            'rest_api_port'         => $rest_api_port,
+          },
+          'DISCOVERY' => {
+            'server'   => $disc_server_ip,
+            'port'     => $disc_server_port,
+          },
+          'REDIS'     => {
+            'redis_server_port' => $redis_server_port,
+            'redis_query_port'  => $redis_server_port,
+            'server'            => $redis_server,
+          },
+          'KEYSTONE'  => $keystone_config,
+        },
+        collector_config         => {
+          'DEFAULT'   => {
+            'cassandra_server_list' => $cassandra_server_list_9042,
+            'hostip'                => $host_ip,
+            'http_server_port'      => $collector_http_server_port,
+            'kafka_broker_list'     => $kafka_broker_list_9092,
+            'zookeeper_server_list' => $zk_server_ip_2181_comma,
+          },
+          'COLLECTOR' => {
+            'port' => $collector_sandesh_port,
+          },
+          'DISCOVERY' => {
+            'disc_server_ip'   => $disc_server_ip,
+            'disc_server_port' => $disc_server_port,
+          },
+          'REDIS'     => {
+            'port'   => $redis_server_port,
+            'server' => $redis_server,
+          },
+        },
+        query_engine_config      => {
+          'DEFAULT'   => {
+            'collectors'            => $collectors
+            'cassandra_server_list' => $cassandra_server_list_9042,
+            'hostip'                => $host_ip,
+          },
+          'DISCOVERY' => {
+            'disc_server_ip'   => $disc_server_ip,
+            'disc_server_port' => $disc_server_port,
+          },
+          'REDIS'     => {
+            'port'   => $redis_server_port,
+            'server' => $redis_server,
+          },
+        },
+        snmp_collector_config    => {
+          'DEFAULTS'  => {
+            'collectors' => $collectors
+            'zookeeper'  => $zk_server_ip_2181_comma,
+          },
+          'DISCOVERY' => {
+            'disc_server_ip'   => $disc_server_ip,
+            'disc_server_port' => $disc_server_port,
+          },
+          'KEYSTONE'  => $keystone_config,
+        },
+        redis_config             => $redis_config,
+        topology_config          => {
+          'DEFAULTS'  => {
+            'collectors' => $collectors
+            'zookeeper'  => $zk_server_ip_2181_comma,
+          },
+          'DISCOVERY' => {
+            'disc_server_ip'   => $disc_server_ip,
+            'disc_server_port' => $disc_server_port,
+          },
+        },
+        vnc_api_lib_config       => $vnc_api_lib_config,
+        keystone_config          => {
+          'KEYSTONE'     => $keystone_config,
+        },
+      }    
     } else {
-      $nodemgr_config = {
-        'COLLECTOR' => {
-          'server_list'   => $collector_server_list_8086,
+      class {'::contrail::analytics':
+        contrail_version         => $contrail_version,
+        alarm_gen_config         => {
+          'DEFAULTS'  => {
+            'collectors'           => $collectors,
+            'host_ip'              => $host_ip,
+            'kafka_broker_list'    => $kafka_broker_list_9092,
+            'rabbitmq_server_list' => $rabbit_server_list_no_port,
+            'rabbitmq_port'        => '5672',
+            'rabbitmq_user'        => $rabbit_user,
+            'rabbitmq_password'    => $rabbit_password,
+            'zk_list'              => $zk_server_ip_2181,
+          },
         },
-      }
-      $disco_config = ''
-      $collectors = $collector_server_list_8086
-      $api_server = $config_api_server_list_8082
-      $collector_api_server = {
-        'API_SERVER' => {
-          'api_server_list' => $config_api_server_list_8082,
+        analytics_nodemgr_config => {
+          'COLLECTOR' => {
+            'server_list'   => $collector_server_list_8086,
+          },
         },
-      }
-      $collector_structured_syslog_collector = {
-        'STRUCTURED_SYSLOG_COLLECTOR' => {
+        analytics_api_config     => {
+          'DEFAULTS'  => {
+            'api_server'            => $api_server,
+            'aaa_mode'              => $analytics_aaa_mode,
+            'cassandra_server_list' => $cassandra_server_list_9042,
+            'collectors'            => $collectors,
+            'host_ip'               => $host_ip,
+            'http_server_port'      => $http_server_port,
+            'rest_api_ip'           => $rest_api_ip,
+            'rest_api_port'         => $rest_api_port,
+          },
+          'REDIS'     => {
+            'redis_server_port' => $redis_server_port,
+            'redis_query_port'  => $redis_server_port,
+            'server'            => $redis_server,
+          },
+          'KEYSTONE'  => $keystone_config,
+        },
+        collector_config         => {
+          'DEFAULT'   => {
+            'cassandra_server_list' => $cassandra_server_list_9042,
+            'hostip'                => $host_ip,
+            'http_server_port'      => $collector_http_server_port,
+            'kafka_broker_list'     => $kafka_broker_list_9092,
+            'zookeeper_server_list' => $zk_server_ip_2181_comma,
+          },
+          'API_SERVER' => {
+            'api_server_list' => $config_api_server_list_8082,
+          },
+          'COLLECTOR' => {
+            'port' => $collector_sandesh_port,
+          },
+          'STRUCTURED_SYSLOG_COLLECTOR' => {
           'kafka_broker_list' => $kafka_broker_list,
-         },
+          },
+          'REDIS'     => {
+            'port'   => $redis_server_port,
+            'server' => $redis_server,
+          },
+        },
+        query_engine_config      => {
+          'DEFAULT'   => {
+            'collectors'            => $collectors
+            'cassandra_server_list' => $cassandra_server_list_9042,
+            'hostip'                => $host_ip,
+          },
+          'REDIS'     => {
+            'port'   => $redis_server_port,
+            'server' => $redis_server,
+          },
+        },
+        snmp_collector_config    => {
+          'DEFAULTS'  => {
+            'collectors' => $collectors
+            'zookeeper'  => $zk_server_ip_2181_comma,
+          },
+          'KEYSTONE'  => $keystone_config,
+        },
+        redis_config             => $redis_config,
+        topology_config          => {
+          'DEFAULTS'  => {
+            'collectors' => $collectors
+            'zookeeper'  => $zk_server_ip_2181_comma,
+          },
+        },
+        vnc_api_lib_config       => $vnc_api_lib_config,
+        keystone_config          => {
+          'KEYSTONE'     => $keystone_config,
+        },
       }
-    }
-    class {'::contrail::analytics':
-      alarm_gen_config         => {
-        'DEFAULTS'  => {
-          'collectors'           => $collectors,
-          'host_ip'              => $host_ip,
-          'kafka_broker_list'    => $kafka_broker_list_9092,
-          'rabbitmq_server_list' => $rabbit_server_list_no_port,
-          'rabbitmq_port'        => '5672',
-          'rabbitmq_user'        => $rabbit_user,
-          'rabbitmq_password'    => $rabbit_password,
-          'zk_list'              => $zk_server_ip_2181,
-        },
-        $disco_config,
-      },
-      analytics_nodemgr_config => {
-        $nodemgr_config,
-      },
-      analytics_api_config     => {
-        'DEFAULTS'  => {
-          'api_server'            => $api_server,
-          'aaa_mode'              => $analytics_aaa_mode,
-          'cassandra_server_list' => $cassandra_server_list_9042,
-          'collectors'            => $collectors,
-          'host_ip'               => $host_ip,
-          'http_server_port'      => $http_server_port,
-          'rest_api_ip'           => $rest_api_ip,
-          'rest_api_port'         => $rest_api_port,
-        },
-        $disco_config,
-        },
-        'REDIS'     => {
-          'redis_server_port' => $redis_server_port,
-          'redis_query_port'  => $redis_server_port,
-          'server'            => $redis_server,
-        },
-        'KEYSTONE'  => $keystone_config,
-      },
-      collector_config         => {
-        'DEFAULT'   => {
-          'cassandra_server_list' => $cassandra_server_list_9042,
-          'hostip'                => $host_ip,
-          'http_server_port'      => $collector_http_server_port,
-          'kafka_broker_list'     => $kafka_broker_list_9092,
-          'zookeeper_server_list' => $zk_server_ip_2181_comma,
-        $collector_api_server,
-        $collector_structured_syslog_collector,
-        },
-        'COLLECTOR' => {
-          'port' => $collector_sandesh_port,
-        },
-        $disco_config,
-        },
-        'REDIS'     => {
-          'port'   => $redis_server_port,
-          'server' => $redis_server,
-        },
-      },
-      query_engine_config      => {
-        'DEFAULT'   => {
-          'collectors'            => $collectors
-          'cassandra_server_list' => $cassandra_server_list_9042,
-          'hostip'                => $host_ip,
-        },
-        $disco_config,
-        'REDIS'     => {
-          'port'   => $redis_server_port,
-          'server' => $redis_server,
-        },
-      },
-      snmp_collector_config    => {
-        'DEFAULTS'  => {
-          'collectors' => $collectors
-          'zookeeper'  => $zk_server_ip_2181_comma,
-        },
-        $disco_config,
-        },
-        'KEYSTONE'  => $keystone_config,
-      },
-      redis_config             => $redis_config,
-      topology_config          => {
-        'DEFAULTS'  => {
-          'collectors' => $collectors
-          'zookeeper'  => $zk_server_ip_2181_comma,
-        },
-        $disco_config,
-      },
-      vnc_api_lib_config       => $vnc_api_lib_config,
-      keystone_config          => {
-        'KEYSTONE'     => $keystone_config,
-      },
     }
   }
   if $step >= 5 {
