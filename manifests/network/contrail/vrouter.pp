@@ -170,8 +170,8 @@ class tripleo::network::contrail::vrouter (
   $auth_port             = hiera('contrail::auth_port'),
   $auth_port_ssl         = hiera('contrail::auth_port_ssl'),
   $auth_protocol         = hiera('contrail::auth_protocol'),
-  $ca_file               = hiera('contrail::service_certificate',false),
-  $cert_file             = hiera('contrail::service_certificate',false),
+  $ca_file               = hiera('contrail::service_certificate', undef),
+  $cert_file             = hiera('contrail::service_certificate', undef),
   $contrail_version      = hiera('contrail::version',4),
   $control_server        = hiera('contrail_config_node_ips',hiera('contrail::vrouter::control_node_ips')),
   $disc_server_ip        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
@@ -187,6 +187,7 @@ class tripleo::network::contrail::vrouter (
   $is_tsn                = hiera('contrail::vrouter::is_tsn',false),
   $is_dpdk               = hiera('contrail::vrouter::is_dpdk',false),
   $dpdk_driver           = hiera('contrail::vrouter::dpdk_driver',false),
+  $ssl_enabled           = hiera('contrail_ssl_enabled', false)
 ) {
   $cidr = netmask_to_cidr($netmask)
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
@@ -195,7 +196,53 @@ class tripleo::network::contrail::vrouter (
   } else {
     $control_server_list = join($control_server, ' ')
   }
-  if $contrail_version == 3 {
+
+  $keystone_config_common = {
+    'KEYSTONE' => {
+      'admin_password'    => $admin_password,
+      'admin_tenant_name' => $admin_tenant_name,
+      'admin_user'        => $admin_user,
+      'auth_host'         => $auth_host,
+      'auth_protocol'     => $auth_protocol,
+      'insecure'          => $insecure,
+      'memcached_servers' => $memcached_servers,
+    },
+  }
+  $vnc_api_lib_config_common = {
+    'auth' => {
+      'AUTHN_SERVER'   => $auth_host,
+      'AUTHN_PROTOCOL' => $auth_protocol,
+    },
+  }
+  if $auth_protocol == 'https' {
+    $keystone_config_auth_specific = {
+      'KEYSTONE' => {
+        'auth_port'         => $auth_port_ssl,
+        'certfile'          => $cert_file,
+        'cafile'            => $ca_file,
+      },
+    }
+    $vnc_api_lib_config_auth_specific = {
+      'auth' => {
+        'AUTHN_PORT'     => $auth_port_ssl,
+        'certfile'       => $cert_file,
+        'cafile'         => $ca_file,
+      },
+    }
+  } else {
+    $keystone_config_auth_specific = {
+      'KEYSTONE' => {
+        'auth_port'         => $auth_port,
+      },
+    }
+    $vnc_api_lib_config_auth_specific = {
+      'auth' => {
+        'AUTHN_PORT'      => $auth_port,
+      },
+    }
+  }
+
+  if $contrail_version < 4 {
     $disco = {
       'port'   => $disc_server_port,
       'server' => $disc_server_ip,
@@ -203,90 +250,90 @@ class tripleo::network::contrail::vrouter (
     $nodemgr_config = {
       'DISCOVERY' => $disco,
     }
-    $collectors = ''
+    $vrouter_agent_config_ver_specific = {
+      'DISCOVERY' => $disco,
+    }
+    $keystone_config = deep_merge($keystone_config_common, $keystone_config_auth_specific)
+    $vnc_api_lib_config_ver_specific = {}
   } else {
-    $disco = {}
     $nodemgr_config = {
       'COLLECTOR' => {
         'server_list'   => $collector_server_list_8086,
       },
     }
-    $collectors = $collector_server_list_8086
+    $vrouter_agent_config_ver_specific = {
+      'DEFAULT' => {
+        'collectors'                      => $collector_server_list_8086,
+        'xmpp_auth_enable'                => $ssl_enabled,
+        'xmpp_dns_auth_enable'            => $ssl_enabled,
+      },
+      'SANDESH' => {
+        'introspect_ssl_enable'           => $ssl_enabled,
+        'sandesh_ssl_enable'              => $ssl_enabled,
+      }
+    }
+    $keystone_config = undef
+    $vnc_api_cfg_global = {
+      'global' => {
+        'WEB_SERVER'  => $api_server,
+        'WEB_PORT'    => $api_port,
+      }
+    }
+    if $auth_host and $auth_host != '' {
+      $vnc_api_lib_config_type = {
+        'auth' => {
+          'AUTHN_TYPE'      => 'keystone',
+          'insecure'        => $insecure,
+        },
+      }
+    } else {
+      $vnc_api_lib_config_type = {
+        'auth' => {
+          'AUTHN_TYPE' => 'noauth',
+        },
+      }
+    }
+    $vnc_api_lib_config_ver_specific = deep_merge($vnc_api_cfg_global, $vnc_api_lib_config_type)
   }
-  if $auth_protocol == 'https' {
-    $keystone_config = {
-      'KEYSTONE' => {
-        'admin_password'    => $admin_password,
-        'admin_tenant_name' => $admin_tenant_name,
-        'admin_user'        => $admin_user,
-        'auth_host'         => $auth_host,
-        'auth_port'         => $auth_port_ssl,
-        'auth_protocol'     => $auth_protocol,
-        'insecure'          => $insecure,
-        'memcached_servers' => $memcached_servers,
-        'certfile'          => $cert_file,
-        'cafile'            => $ca_file,
-      },
-    }
-    $vnc_api_lib_config = {
-      'auth' => {
-        'AUTHN_SERVER'   => $auth_host,
-        'AUTHN_PORT'     => $auth_port_ssl,
-        'AUTHN_PROTOCOL' => $auth_protocol,
-        'certfile'       => $cert_file,
-        'cafile'         => $ca_file,
-      },
-    }
+  $vnc_api_lib_config = deep_merge(
+    deep_merge($vnc_api_lib_config_common, $vnc_api_lib_config_auth_specific),
+    $vnc_api_lib_config_ver_specific
+  )
+  $vrouter_agent_config_common = {
+    'DNS'  => {
+      'server' => $control_server_list,
+    },
+    'CONTROL-NODE'  => {
+      'server' => $control_server_list,
+    },
+    'NETWORKS'  => {
+      'control_network_ip' => $host_ip,
+    },
+    'VIRTUAL-HOST-INTERFACE'  => {
+      'compute_node_address' => $host_ip,
+      'gateway'              => $gateway,
+      'ip'                   => "${host_ip}/${cidr}",
+      'name'                 => 'vhost0',
+      'physical_interface'   => $physical_interface,
+    },
+    'METADATA' => {
+      'metadata_proxy_secret' => $metadata_secret,
+    },
+  }
+  if !$is_dpdk {
+    $macaddress = inline_template("<%= scope.lookupvar('::macaddress_${physical_interface}') -%>")
   } else {
-    $keystone_config = {
-      'KEYSTONE' => {
-        'admin_password'    => $admin_password,
-        'admin_tenant_name' => $admin_tenant_name,
-        'admin_user'        => $admin_user,
-        'auth_host'         => $auth_host,
-        'auth_port'         => $auth_port,
-        'auth_protocol'     => $auth_protocol,
-        'insecure'          => $insecure,
-        'memcached_servers' => $memcached_servers,
-      },
-    }
-    $vnc_api_lib_config = {
-      'auth' => {
-        'AUTHN_SERVER' => $auth_host,
-      },
-    }
+    $macaddress = generate('/bin/cat','/etc/contrail/dpdk_mac')
   }
   if $is_tsn {
-    $macaddress = inline_template("<%= scope.lookupvar('::macaddress_${physical_interface}') -%>")
-    $vrouter_agent_config = {
+    $vrouter_agent_config_mode_specific = {
       'DEFAULT'  => {
         'agent_mode' => 'tsn',
       },
-      'DNS'  => {
-        'server' => $control_server_list,
-      },
-      'CONTROL-NODE'  => {
-        'server' => $control_server_list,
-      },
-      'NETWORKS'  => {
-        'control_network_ip' => $host_ip,
-      },
-      'VIRTUAL-HOST-INTERFACE'  => {
-        'compute_node_address' => $host_ip,
-        'gateway'              => $gateway,
-        'ip'                   => "${host_ip}/${cidr}",
-        'name'                 => 'vhost0',
-        'physical_interface'   => $physical_interface,
-      },
-      'METADATA' => {
-        'metadata_proxy_secret' => $metadata_secret,
-      },
-      'DISCOVERY' => $disco,
     }
   } elsif $is_dpdk {
     $pciaddress = generate('/bin/cat','/etc/contrail/dpdk_pci')
-    $macaddress = generate('/bin/cat','/etc/contrail/dpdk_mac')
-    $vrouter_agent_config = {
+    $vrouter_agent_config_mode_specific = {
       'DEFAULT'  => {
         'platform'                   => 'dpdk',
         'physical_uio_driver'        => $dpdk_driver,
@@ -296,55 +343,18 @@ class tripleo::network::contrail::vrouter (
         'log_level'                  => 'log_level',
         'log_local'                  => '1',
       },
-      'DNS'  => {
-        'server' => $control_server_list,
-      },
-      'CONTROL-NODE'  => {
-        'server' => $control_server_list,
-      },
-      'NETWORKS'  => {
-        'control_network_ip' => $host_ip,
-      },
-      'VIRTUAL-HOST-INTERFACE'  => {
-        'compute_node_address' => $host_ip,
-        'gateway'              => $gateway,
-        'ip'                   => "${host_ip}/${cidr}",
-        'name'                 => 'vhost0',
-        'physical_interface'   => $physical_interface,
-      },
-      'METADATA' => {
-        'metadata_proxy_secret' => $metadata_secret,
-      },
-      'DISCOVERY' => $disco,
       'SERVICE-INSTANCE' => {
         'netns_command' => '/usr/bin/opencontrail-vrouter-netns',
       },
     }
   } else {
-    $macaddress = inline_template("<%= scope.lookupvar('::macaddress_${physical_interface}') -%>")
-    $vrouter_agent_config = {
-      'DNS'  => {
-        'server' => $control_server_list,
-      },
-      'CONTROL-NODE'  => {
-        'server' => $control_server_list,
-      },
-      'NETWORKS'  => {
-        'control_network_ip' => $host_ip,
-      },
-      'VIRTUAL-HOST-INTERFACE'  => {
-        'compute_node_address' => $host_ip,
-        'gateway'              => $gateway,
-        'ip'                   => "${host_ip}/${cidr}",
-        'name'                 => 'vhost0',
-        'physical_interface'   => $physical_interface,
-      },
-      'METADATA' => {
-        'metadata_proxy_secret' => $metadata_secret,
-      },
-      'DISCOVERY' => $disco,
-    }
+    $vrouter_agent_config_mode_specific = {}
   }
+  $vrouter_agent_config = deep_merge(
+    deep_merge($vrouter_agent_config_common, $vrouter_agent_config_mode_specific),
+    $vrouter_agent_config_ver_specific
+  )
+
   if $step >= 4 {
     class {'::contrail::vrouter':
         contrail_version       => $contrail_version,
