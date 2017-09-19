@@ -240,7 +240,7 @@ class tripleo::network::contrail::config(
   $cert_file              = hiera('contrail::service_certificate',false),
   $config_hostnames       = hiera('contrail_config_short_node_names'),
   $control_server_list    = hiera('contrail_control_node_ips'),
-  $contrail_version       = hiera('contrail::version',4),
+  $contrail_version       = hiera('contrail::contrail_version',4),
   $disc_server_ip         = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port       = hiera('contrail::disc_server_port'),
   $host_ip                = hiera('contrail::config::host_ip'),

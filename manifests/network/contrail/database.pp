@@ -119,7 +119,7 @@ class tripleo::network::contrail::database(
   $api_port              = hiera('contrail::api_port'),
   $auth_host             = hiera('contrail::auth_host'),
   $cassandra_servers     = hiera('contrail_database_node_ips'),
-  $contrail_version      = hiera('contrail::version',4),
+  $contrail_version      = hiera('contrail::contrail_version',4),
   $disc_server_ip        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port      = hiera('contrail::disc_server_port'),
   $host_ip               = hiera('contrail::database::host_ip'),

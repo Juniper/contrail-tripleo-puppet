@@ -218,7 +218,7 @@ class tripleo::network::contrail::analytics(
   $config_server_list         = hiera('contrail_config_node_ips'),
   $collector_http_server_port = hiera('contrail::analytics::collector_http_server_port'),
   $collector_sandesh_port     = hiera('contrail::analytics::collector_sandesh_port'),
-  $contrail_version           = hiera('contrail::version',4),
+  $contrail_version           = hiera('contrail::contrail_version',4),
   $disc_server_ip             = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port           = hiera('contrail::disc_server_port'),
   $http_server_port           = hiera('contrail::analytics::http_server_port'),
