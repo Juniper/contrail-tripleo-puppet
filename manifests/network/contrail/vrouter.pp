@@ -280,7 +280,7 @@ class tripleo::network::contrail::vrouter (
       'SANDESH' => {
         'introspect_ssl_enable'           => $ssl_enabled,
         'sandesh_ssl_enable'              => $ssl_enabled,
-      }
+      },
       'DNS'  => {
         'servers' => $control_server_list_53,
       },
