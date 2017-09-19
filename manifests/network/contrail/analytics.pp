@@ -344,8 +344,8 @@ class tripleo::network::contrail::analytics(
             'port' => $collector_sandesh_port,
           },
           'DISCOVERY' => {
-            'disc_server_ip'   => $disc_server_ip,
-            'disc_server_port' => $disc_server_port,
+            'server'   => $disc_server_ip,
+            'port' => $disc_server_port,
           },
           'REDIS'     => {
             'port'   => $redis_server_port,
@@ -358,8 +358,8 @@ class tripleo::network::contrail::analytics(
             'hostip'                => $host_ip,
           },
           'DISCOVERY' => {
-            'disc_server_ip'   => $disc_server_ip,
-            'disc_server_port' => $disc_server_port,
+            'server'   => $disc_server_ip,
+            'port' => $disc_server_port,
           },
           'REDIS'     => {
             'port'   => $redis_server_port,
