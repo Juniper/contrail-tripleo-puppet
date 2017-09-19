@@ -144,7 +144,7 @@ class tripleo::network::contrail::control(
   $auth_port             = hiera('contrail::auth_port'),
   $auth_protocol         = hiera('contrail::auth_protocol'),
   $config_server_list    = hiera('contrail_config_node_ips'),
-  $contrail_version      = hiera('contrail::version',4),
+  $contrail_version      = hiera('contrail::contrail_version',4),
   $disc_server_ip        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port      = hiera('contrail::disc_server_port'),
   $host_ip               = hiera('contrail::control::host_ip'),
