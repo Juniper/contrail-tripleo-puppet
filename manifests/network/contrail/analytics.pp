@@ -312,7 +312,7 @@ class tripleo::network::contrail::analytics(
         },
         analytics_api_config     => {
           'DEFAULTS'  => {
-            'api_server'            => $api_server,
+            'api_server'            => "${api_server}:${api_port}",
             'aaa_mode'              => $analytics_aaa_mode,
             'cassandra_server_list' => $cassandra_server_list_9042,
             'host_ip'               => $host_ip,
