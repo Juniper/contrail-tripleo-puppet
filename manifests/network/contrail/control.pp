@@ -168,8 +168,8 @@ class tripleo::network::contrail::control(
   $dns_ifmap_user         = "${ifmap_username}.dns"
   $dns_ifmap_password     = "${ifmap_username}.dns"
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
-  $config_db_server_list_9041 = join([join($config_server_list, ':9042 '),':9042'],'')
-  $rabbit_server_list_5672 = join([join($rabbit_server, ':5672,'),':5672'],'')
+  $config_db_server_list_9042 = join([join($config_server_list, ':9042 '),':9042'],'')
+  $rabbit_server_list_5672 = join([join($rabbit_server, ':5672 '),':5672'],'')
 
   if $step >= 3 {
     if $contrail_version == 3 {
