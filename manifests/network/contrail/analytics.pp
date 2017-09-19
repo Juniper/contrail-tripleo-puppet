@@ -295,7 +295,6 @@ class tripleo::network::contrail::analytics(
             'host_ip'              => $host_ip,
             'kafka_broker_list'    => $kafka_broker_list_9092,
             'rabbitmq_server_list' => $rabbit_server_list_5672,
-            'rabbitmq_port'        => '5672',
             'rabbitmq_user'        => $rabbit_user,
             'rabbitmq_password'    => $rabbit_password,
             'zk_list'              => $zk_server_ip_2181,
@@ -313,7 +312,7 @@ class tripleo::network::contrail::analytics(
         },
         analytics_api_config     => {
           'DEFAULTS'  => {
-            'api_server'            => $api_server,
+            'api_server'            => "${api_server}:${api_port}",
             'aaa_mode'              => $analytics_aaa_mode,
             'cassandra_server_list' => $cassandra_server_list_9042,
             'host_ip'               => $host_ip,
@@ -344,8 +343,8 @@ class tripleo::network::contrail::analytics(
             'port' => $collector_sandesh_port,
           },
           'DISCOVERY' => {
-            'disc_server_ip'   => $disc_server_ip,
-            'disc_server_port' => $disc_server_port,
+            'server'   => $disc_server_ip,
+            'port' => $disc_server_port,
           },
           'REDIS'     => {
             'port'   => $redis_server_port,
@@ -358,8 +357,8 @@ class tripleo::network::contrail::analytics(
             'hostip'                => $host_ip,
           },
           'DISCOVERY' => {
-            'disc_server_ip'   => $disc_server_ip,
-            'disc_server_port' => $disc_server_port,
+            'server'   => $disc_server_ip,
+            'port' => $disc_server_port,
           },
           'REDIS'     => {
             'port'   => $redis_server_port,
