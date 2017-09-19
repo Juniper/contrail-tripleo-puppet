@@ -241,6 +241,7 @@ class tripleo::network::contrail::analytics(
   $cassandra_server_list_9042 = join([join($cassandra_server_list, ':9042 '),':9042'],'')
   $config_api_server_list_8082 = join([join($config_server_list, ':8082 '),':8082'],'')
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
+  $redis_server_list_6379 = join([join($analytics_server_list, ':6379 '),':6379'],'')
   $kafka_broker_list_9092 = join([join($kafka_broker_list, ':9092 '),':9092'],'')
   $rabbit_server_list_5672 = join([join($rabbit_server, ':5672,'),':5672'],'')
   $rabbit_server_list_no_port = join($rabbit_server, ',')
@@ -424,11 +425,13 @@ class tripleo::network::contrail::analytics(
             'rest_api_ip'           => $rest_api_ip,
             'rest_api_port'         => $rest_api_port,
             'api_server'            => $config_api_server_list_8082,
+            'zk_list'               => $zk_server_ip_2181,
           },
           'REDIS'     => {
             'redis_server_port' => $redis_server_port,
             'redis_query_port'  => $redis_server_port,
             'server'            => $redis_server,
+            'redis_uve_list'    => $redis_server_list_6379,
           },
           'KEYSTONE'  => $keystone_config,
         },
