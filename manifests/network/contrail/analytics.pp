@@ -294,15 +294,15 @@ class tripleo::network::contrail::analytics(
           'DEFAULTS'  => {
             'host_ip'              => $host_ip,
             'kafka_broker_list'    => $kafka_broker_list_9092,
-            'rabbitmq_server_list' => $rabbit_server_list_no_port,
+            'rabbitmq_server_list' => $rabbit_server_list_5672,
             'rabbitmq_port'        => '5672',
             'rabbitmq_user'        => $rabbit_user,
             'rabbitmq_password'    => $rabbit_password,
             'zk_list'              => $zk_server_ip_2181,
           },
           'DISCOVERY' => {
-            'server'   => $disc_server_ip,
-            'port'     => $disc_server_port,
+            'disc_server_ip'       => $disc_server_ip,
+            'disc_server_port'     => $disc_server_port,
           },
         },
         analytics_nodemgr_config => {
@@ -322,8 +322,8 @@ class tripleo::network::contrail::analytics(
             'rest_api_port'         => $rest_api_port,
           },
           'DISCOVERY' => {
-            'server'   => $disc_server_ip,
-            'port'     => $disc_server_port,
+            'disc_server_ip'       => $disc_server_ip,
+            'disc_server_port'     => $disc_server_port,
           },
           'REDIS'     => {
             'redis_server_port' => $redis_server_port,
