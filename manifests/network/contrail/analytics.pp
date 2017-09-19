@@ -295,7 +295,6 @@ class tripleo::network::contrail::analytics(
             'host_ip'              => $host_ip,
             'kafka_broker_list'    => $kafka_broker_list_9092,
             'rabbitmq_server_list' => $rabbit_server_list_5672,
-            'rabbitmq_port'        => '5672',
             'rabbitmq_user'        => $rabbit_user,
             'rabbitmq_password'    => $rabbit_password,
             'zk_list'              => $zk_server_ip_2181,
