@@ -493,7 +493,7 @@
 #    'contrail_analytics_rest_port' (Defaults to 8081)
 #    'contrail_analytics_ssl_rest_port' (Defaults to 18081)
 #    'contrail_analytics_ssl_port' (Defaults to 18090)
-#    'contrail_webui_http_port' (Defaults to 8080)
+#    'contrail_webui_http_port' (Defaults to 8180)
 #    'contrail_webui_https_port' (Defaults to 8143)
 #    'glance_api_port' (Defaults to 9292)
 #    'glance_api_ssl_port' (Defaults to 13292)
@@ -672,7 +672,7 @@ class tripleo::haproxy (
     contrail_analytics_rest_port => 8081,
     contrail_analytics_ssl_rest_port => 18081,
     contrail_analytics_ssl_port => 18090,
-    contrail_webui_http_port => 8080,
+    contrail_webui_http_port => 8180,
     contrail_webui_https_port => 8143,
     docker_registry_port => 8787,
     docker_registry_ssl_port => 13787,
