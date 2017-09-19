@@ -163,7 +163,7 @@ class tripleo::network::contrail::vrouter (
   $admin_tenant_name     = hiera('contrail::admin_tenant_name'),
   $admin_token           = hiera('contrail::admin_token'),
   $admin_user            = hiera('contrail::admin_user'),
-  $analytics_server_list = hiera('contrail_analytics_node_ips'),
+  $analytics_server_list = hiera('contrail_analytics_node_ips',hiera('contrail::vrouter::analytics_node_ips')),
   $api_port              = hiera('contrail::api_port'),
   $api_server            = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $auth_host             = hiera('contrail::auth_host'),
