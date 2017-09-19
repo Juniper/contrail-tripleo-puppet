@@ -227,7 +227,7 @@ class tripleo::network::contrail::control(
             'rabbitmq_password' => $rabbit_password,
             'rabbitmq_vhost' => '/',
             'rabbitmq_use_ssl' => 'False',
-            'config_db_server_list' => $config_db_server_list_9041,
+            'config_db_server_list' => $config_db_server_list_9042,
           },
         },
         dns_config             => {
