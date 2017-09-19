@@ -163,7 +163,7 @@ class tripleo::network::contrail::vrouter (
   $admin_tenant_name     = hiera('contrail::admin_tenant_name'),
   $admin_token           = hiera('contrail::admin_token'),
   $admin_user            = hiera('contrail::admin_user'),
-  $analytics_server_list = hiera('contrail_analytics_node_ips',hiera('contrail::vrouter::analytics_node_ips')),
+  $analytics_server_list = hiera('contrail_analytics_node_ips'),
   $api_port              = hiera('contrail::api_port'),
   $api_server            = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $auth_host             = hiera('contrail::auth_host'),
@@ -193,8 +193,12 @@ class tripleo::network::contrail::vrouter (
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
   if size($control_server) == 0 {
     $control_server_list = ''
+    $control_server_list_53 = ''
+    $control_server_list_5269 = ''
   } else {
     $control_server_list = join($control_server, ' ')
+    $control_server_list_53 = join([join($control_server, ':53 '),':53'],'')
+    $control_server_list_5269 = join([join($control_server, ':5269 '),':5269'],'')
   }
 
   $keystone_config_common = {
@@ -252,6 +256,12 @@ class tripleo::network::contrail::vrouter (
     }
     $vrouter_agent_config_ver_specific = {
       'DISCOVERY' => $disco,
+      'DNS'  => {
+        'server' => $control_server_list,
+      },
+      'CONTROL-NODE'  => {
+        'server' => $control_server_list,
+      },
     }
     $keystone_config = deep_merge($keystone_config_common, $keystone_config_auth_specific)
     $vnc_api_lib_config_ver_specific = {}
@@ -271,6 +281,12 @@ class tripleo::network::contrail::vrouter (
         'introspect_ssl_enable'           => $ssl_enabled,
         'sandesh_ssl_enable'              => $ssl_enabled,
       }
+      'DNS'  => {
+        'servers' => $control_server_list_53,
+      },
+      'CONTROL-NODE'  => {
+        'servers' => $control_server_list_5269,
+      },
     }
     $keystone_config = undef
     $vnc_api_cfg_global = {
@@ -300,12 +316,6 @@ class tripleo::network::contrail::vrouter (
     $vnc_api_lib_config_ver_specific
   )
   $vrouter_agent_config_common = {
-    'DNS'  => {
-      'server' => $control_server_list,
-    },
-    'CONTROL-NODE'  => {
-      'server' => $control_server_list,
-    },
     'NETWORKS'  => {
       'control_network_ip' => $host_ip,
     },
