@@ -408,6 +408,12 @@ class tripleo::network::contrail::analytics(
           'API_SERVER' => {
             'api_server_list' => $config_api_server_list_8082,
           },
+          'REDIS'     => {
+            'redis_server_port' => $redis_server_port,
+            'redis_query_port'  => $redis_server_port,
+            'server'            => $redis_server,
+            'redis_uve_list'    => $redis_server_list_6379,
+          },
         },
         analytics_nodemgr_config => {
           'COLLECTOR' => {
