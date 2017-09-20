@@ -39,6 +39,11 @@
 #  String value.
 #  Defaults to hiera('contrail::admin_user')
 #
+# [*analytics_server_list*]
+#  (optional) list of analytics server
+#  Array of String values.
+#  Defaults to hiera('contrail_analytics_node_ips')
+#
 # [*api_server*]
 #  (optional) VIP of Config API
 #  String (IPv4) value.
@@ -104,26 +109,49 @@
 #  Defaults to hiera('contrail_database_node_ips')
 #
 class tripleo::network::contrail::database(
-  $step                 = hiera('step'),
-  $admin_password       = hiera('contrail::admin_password'),
-  $admin_tenant_name    = hiera('contrail::admin_tenant_name'),
-  $admin_token          = hiera('contrail::admin_token'),
-  $admin_user           = hiera('contrail::admin_user'),
-  $api_server           = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $api_port             = hiera('contrail::api_port'),
-  $auth_host            = hiera('contrail::auth_host'),
-  $cassandra_servers    = hiera('contrail_database_node_ips'),
-  $disc_server_ip       = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $disc_server_port     = hiera('contrail::disc_server_port'),
-  $host_ip              = hiera('contrail::database::host_ip'),
-  $host_name            = $::hostname,
-  $internal_vip           = hiera('internal_api_virtual_ip'),
-  $zookeeper_client_ip  = hiera('contrail::database::host_ip'),
-  $zookeeper_hostnames  = hiera('contrail_database_short_node_names'),
-  $zookeeper_server_ips = hiera('contrail_database_node_ips'),
+  $step                  = hiera('step'),
+  $admin_password        = hiera('contrail::admin_password'),
+  $admin_tenant_name     = hiera('contrail::admin_tenant_name'),
+  $admin_token           = hiera('contrail::admin_token'),
+  $admin_user            = hiera('contrail::admin_user'),
+  $analytics_server_list = hiera('contrail_analytics_node_ips'),
+  $api_server            = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $api_port              = hiera('contrail::api_port'),
+  $auth_host             = hiera('contrail::auth_host'),
+  $cassandra_servers     = hiera('contrail_database_node_ips'),
+  $contrail_version      = hiera('contrail::contrail_version',4),
+  $disc_server_ip        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $disc_server_port      = hiera('contrail::disc_server_port'),
+  $host_ip               = hiera('contrail::database::host_ip'),
+  $host_name             = $::hostname,
+  $internal_vip          = hiera('internal_api_virtual_ip'),
+  $zookeeper_client_ip   = hiera('contrail::database::host_ip'),
+  $zookeeper_hostnames   = hiera('contrail_database_short_node_names'),
+  $zookeeper_server_ips  = hiera('contrail_database_node_ips'),
 )
 {
+  $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
   if $step == 2 {
+    if $contrail_version == 3 {
+      $nodemgr_config = {
+        'DEFAULT'   => {
+          'hostip' => $host_ip,
+        },
+        'DISCOVERY' => {
+          'server'   => $disc_server_ip,
+          'port'     => $disc_server_port,
+        },
+      }
+    } else {
+      $nodemgr_config = {
+        'DEFAULT'   => {
+          'hostip' => $host_ip,
+        },
+        'COLLECTOR' => {
+          'server_list'   => $collector_server_list_8086,
+        },
+      }
+    }
     class {'::contrail::database':
       database_params => {
         'auth_host'             => $auth_host,
@@ -139,15 +167,7 @@ class tripleo::network::contrail::database(
         'zookeeper_client_ip'   => $zookeeper_client_ip,
         'zookeeper_hostnames'   => $zookeeper_hostnames,
         'zookeeper_server_ips'  => $zookeeper_server_ips,
-        database_nodemgr_config => {
-          'DEFAULT'   => {
-            'hostip' => $host_ip,
-          },
-          'DISCOVERY' => {
-            'port'   => $disc_server_port,
-            'server' => $disc_server_ip,
-          },
-        },
+        database_nodemgr_config => $nodemgr_config,
       }
     }
   }

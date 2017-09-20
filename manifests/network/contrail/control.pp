@@ -39,6 +39,11 @@
 #  String value.
 #  Defaults to hiera('contrail::admin_user'),
 #
+# [*analytics_server_list*]
+#  (optional) list of analytics server
+#  Array of String values.
+#  Defaults to hiera('contrail_analytics_node_ips')
+#
 # [*api_server*]
 #  (optional) IP address of api server
 #  String value.
@@ -127,72 +132,116 @@
 #  Defaults to hiera('step')
 #
 class tripleo::network::contrail::control(
-  $step              = hiera('step'),
-  $admin_password    = hiera('contrail::admin_password'),
-  $admin_tenant_name = hiera('contrail::admin_tenant_name'),
-  $admin_token       = hiera('contrail::admin_token'),
-  $admin_user        = hiera('contrail::admin_user'),
-  $api_server        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $api_port          = hiera('contrail::api_port'),
-  $auth_host         = hiera('contrail::auth_host'),
-  $auth_port         = hiera('contrail::auth_port'),
-  $auth_protocol     = hiera('contrail::auth_protocol'),
-  $disc_server_ip    = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $disc_server_port  = hiera('contrail::disc_server_port'),
-  $host_ip           = hiera('contrail::control::host_ip'),
-  $ibgp_auto_mesh    = true,
-  $ifmap_password    = hiera('contrail::control::host_ip'),
-  $ifmap_username    = hiera('contrail::control::host_ip'),
-  $insecure          = hiera('contrail::insecure'),
-  $memcached_servers = hiera('contrail::memcached_server'),
-  $internal_vip        = hiera('internal_api_virtual_ip'),
-  $router_asn        = hiera('contrail::control::asn'),
-  $secret            = hiera('contrail::control::rndc_secret'),
-  $manage_named      = hiera('contrail::control::manage_named'),
+  $step                  = hiera('step'),
+  $admin_password        = hiera('contrail::admin_password'),
+  $admin_tenant_name     = hiera('contrail::admin_tenant_name'),
+  $admin_token           = hiera('contrail::admin_token'),
+  $admin_user            = hiera('contrail::admin_user'),
+  $analytics_server_list = hiera('contrail_analytics_node_ips'),
+  $api_server            = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $api_port              = hiera('contrail::api_port'),
+  $auth_host             = hiera('contrail::auth_host'),
+  $auth_port             = hiera('contrail::auth_port'),
+  $auth_protocol         = hiera('contrail::auth_protocol'),
+  $config_server_list    = hiera('contrail_config_node_ips'),
+  $contrail_version      = hiera('contrail::contrail_version',4),
+  $disc_server_ip        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $disc_server_port      = hiera('contrail::disc_server_port'),
+  $host_ip               = hiera('contrail::control::host_ip'),
+  $ibgp_auto_mesh        = true,
+  $ifmap_password        = hiera('contrail::control::host_ip'),
+  $ifmap_username        = hiera('contrail::control::host_ip'),
+  $insecure              = hiera('contrail::insecure'),
+  $memcached_servers     = hiera('contrail::memcached_server'),
+  $internal_vip          = hiera('internal_api_virtual_ip'),
+  $rabbit_server         = hiera('rabbitmq_node_ips'),
+  $rabbit_user           = hiera('contrail::rabbit_user'),
+  $rabbit_password       = hiera('contrail::rabbit_password'),
+  $rabbit_port           = hiera('contrail::rabbit_port'),
+  $router_asn            = hiera('contrail::control::asn'),
+  $secret                = hiera('contrail::control::rndc_secret'),
+  $manage_named          = hiera('contrail::control::manage_named'),
 )
 {
   $control_ifmap_user     = "${ifmap_username}.control"
   $control_ifmap_password = "${ifmap_username}.control"
   $dns_ifmap_user         = "${ifmap_username}.dns"
   $dns_ifmap_password     = "${ifmap_username}.dns"
+  $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
+  $config_db_server_list_9042 = join([join($config_server_list, ':9042 '),':9042'],'')
+  $rabbit_server_list_5672 = join([join($rabbit_server, ':5672 '),':5672'],'')
 
   if $step >= 3 {
-    class {'::contrail::control':
-      secret                 => $secret,
-      manage_named           => $manage_named,
-      control_config         => {
-        'DEFAULT'   => {
-          'hostip' => $host_ip,
+    if $contrail_version == 3 {
+      class {'::contrail::control':
+        contrail_version       => $contrail_version,
+        secret                 => $secret,
+        manage_named           => $manage_named,
+        control_config         => {
+          'DEFAULT'   => {
+            'hostip' => $host_ip,
+          },
+          'DISCOVERY' => {
+            'port'   => $disc_server_port,
+            'server' => $disc_server_ip,
+          },
+          'IFMAP'     => {
+            'password' => $control_ifmap_user,
+            'user'     => $control_ifmap_password,
+          },
         },
-        'DISCOVERY' => {
-          'port'   => $disc_server_port,
-          'server' => $disc_server_ip,
+        dns_config             => {
+          'DEFAULT'   => {
+            'hostip'      => $host_ip,
+            'rndc_secret' => $secret,
+          },
+          'DISCOVERY' => {
+            'port'   => $disc_server_port,
+            'server' => $disc_server_ip,
+          },
+          'IFMAP'     => {
+            'password' => $dns_ifmap_user,
+            'user'     => $dns_ifmap_password,
+          },
         },
-        'IFMAP'     => {
-          'password' => $control_ifmap_user,
-          'user'     => $control_ifmap_password,
-        },
-      },
-      dns_config             => {
-        'DEFAULT'   => {
-          'hostip'      => $host_ip,
-          'rndc_secret' => $secret,
-        },
-        'DISCOVERY' => {
-          'port'   => $disc_server_port,
-          'server' => $disc_server_ip,
-        },
-        'IFMAP'     => {
-          'password' => $dns_ifmap_user,
-          'user'     => $dns_ifmap_password,
+        control_nodemgr_config => {
+          'DISCOVERY' => {
+            'server'   => $disc_server_ip,
+            'port'     => $disc_server_port,
+          },
         }
-      },
-      control_nodemgr_config => {
-        'DISCOVERY' => {
-          'port'   => $disc_server_port,
-          'server' => $disc_server_ip,
+      }
+    } else {
+      class {'::contrail::control':
+        contrail_version       => $contrail_version,
+        secret                 => $secret,
+        manage_named           => $manage_named,
+        control_config         => {
+          'DEFAULT'   => {
+            'hostip'     => $host_ip,
+            'collectors' => $collector_server_list_8086,
+          },
+          'CONFIGDB'   => {
+            'rabbitmq_server_list' => $rabbit_server_list_5672,
+            'rabbitmq_user' => $rabbit_user,
+            'rabbitmq_password' => $rabbit_password,
+            'rabbitmq_vhost' => '/',
+            'rabbitmq_use_ssl' => 'False',
+            'config_db_server_list' => $config_db_server_list_9042,
+          },
         },
-      },
+        dns_config             => {
+          'DEFAULT'   => {
+            'hostip'      => $host_ip,
+            'rndc_secret' => $secret,
+          },
+        },
+        control_nodemgr_config => {
+          'COLLECTOR' => {
+            'server_list'   => $collector_server_list_8086,
+          },
+        },
+      }
     }
   }
   if $step >= 5 {
