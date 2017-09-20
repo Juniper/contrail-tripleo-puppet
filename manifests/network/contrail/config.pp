@@ -274,6 +274,7 @@ class tripleo::network::contrail::config(
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
   $rabbit_server_list_5672 = join([join($rabbit_server, ':5672,'),':5672'],'')
   $zk_server_ip_2181 = join([join($zk_server_ip, ':2181,'),':2181'],'')
+  $analytics_server_list_8081 = join([join($analytics_server_list, ':8081 '),':8081'],'')
 
   if $auth_protocol == 'https' {
     $keystone_config = {
@@ -466,6 +467,9 @@ class tripleo::network::contrail::config(
             'rabbit_password'       => $rabbit_password,
             'redis_server'          => $redis_server,
             'zk_server_ip'          => $zk_server_ip_2181,
+          },
+          'SCHEDULER' => {
+            'analytics_server_list' => $analytics_server_list_8081,
           },
         },
         vnc_api_lib_config      => $vnc_api_lib_config,
