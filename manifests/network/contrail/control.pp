@@ -200,8 +200,8 @@ class tripleo::network::contrail::control(
             'server' => $disc_server_ip,
           },
           'IFMAP'     => {
-            'password' => $control_ifmap_user,
-            'user'     => $control_ifmap_password,
+            'password' => $dns_ifmap_user,
+            'user'     => $dns_ifmap_password,
           },
         },
         control_nodemgr_config => {
