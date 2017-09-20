@@ -234,6 +234,15 @@ class tripleo::network::contrail::control(
           'DEFAULT'   => {
             'hostip'      => $host_ip,
             'rndc_secret' => $secret,
+            'collectors' => $collector_server_list_8086,
+          },
+          'CONFIGDB'   => {
+            'rabbitmq_server_list' => $rabbit_server_list_5672,
+            'rabbitmq_user' => $rabbit_user,
+            'rabbitmq_password' => $rabbit_password,
+            'rabbitmq_vhost' => '/',
+            'rabbitmq_use_ssl' => 'False',
+            'config_db_server_list' => $config_db_server_list_9042,
           },
         },
         control_nodemgr_config => {
