@@ -19,6 +19,11 @@
 #
 # == Parameters:
 #
+# [*analytics_server_list*]
+#  (optional) list of analytics server
+#  Array of String values.
+#  Defaults to hiera('contrail_analytics_node_ips')
+#
 # [*auth_host*]
 #  (optional) IPv4 VIP of Keystone
 #  String (IPv4) value
@@ -115,27 +120,30 @@
 #  Defaults to hiera('contrail_database_node_ips')
 #
 class tripleo::network::contrail::analyticsdatabase(
-  $step                 = hiera('step'),
-  $auth_host            = hiera('contrail::auth_host'),
-  $api_server           = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $api_port             = hiera('contrail::api_port'),
-  $admin_password       = hiera('contrail::admin_password'),
-  $admin_tenant_name    = hiera('contrail::admin_tenant_name'),
-  $admin_token          = hiera('contrail::admin_token'),
-  $admin_user           = hiera('contrail::admin_user'),
-  $auth_protocol        = hiera('contrail::auth_protocol'),
-  $cassandra_servers    = hiera('contrail_analytics_database_node_ips'),
-  $ca_file              = hiera('contrail::service_certificate',false),
-  $cert_file            = hiera('contrail::service_certificate',false),
-  $disc_server_ip       = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $disc_server_port     = hiera('contrail::disc_server_port'),
-  $host_ip              = hiera('contrail::analytics::database::host_ip'),
-  $host_name            = $::hostname,
-  $kafka_hostnames      = hiera('contrail_analytics_database_short_node_names', ''),
-  $internal_vip           = hiera('internal_api_virtual_ip'),
-  $zookeeper_server_ips = hiera('contrail_database_node_ips'),
+  $step                  = hiera('step'),
+  $analytics_server_list = hiera('contrail_analytics_node_ips'),
+  $auth_host             = hiera('contrail::auth_host'),
+  $api_server            = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $api_port              = hiera('contrail::api_port'),
+  $admin_password        = hiera('contrail::admin_password'),
+  $admin_tenant_name     = hiera('contrail::admin_tenant_name'),
+  $admin_token           = hiera('contrail::admin_token'),
+  $admin_user            = hiera('contrail::admin_user'),
+  $auth_protocol         = hiera('contrail::auth_protocol'),
+  $cassandra_servers     = hiera('contrail_analytics_database_node_ips'),
+  $ca_file               = hiera('contrail::service_certificate',false),
+  $cert_file             = hiera('contrail::service_certificate',false),
+  $contrail_version      = hiera('contrail::contrail_version',4),
+  $disc_server_ip        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $disc_server_port      = hiera('contrail::disc_server_port'),
+  $host_ip               = hiera('contrail::analytics::database::host_ip'),
+  $host_name             = $::hostname,
+  $kafka_hostnames       = hiera('contrail_analytics_database_short_node_names', ''),
+  $internal_vip          = hiera('internal_api_virtual_ip'),
+  $zookeeper_server_ips  = hiera('contrail_database_node_ips'),
 )
 {
+  $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
   if $auth_protocol == 'https' {
     $vnc_api_lib_config = {
       'auth' => {
@@ -154,6 +162,26 @@ class tripleo::network::contrail::analyticsdatabase(
     }
   }
   if $step == 2 {
+    if $contrail_version == 3 {
+      $nodemgr_config = {
+        'DEFAULT'   => {
+          'hostip' => $host_ip,
+        },
+        'DISCOVERY' => {
+          'server'   => $disc_server_ip,
+          'port'     => $disc_server_port,
+        },
+      }
+    } else {
+      $nodemgr_config = {
+        'DEFAULTS'   => {
+          'hostip' => $host_ip,
+        },
+        'COLLECTOR' => {
+          'server_list'   => $collector_server_list_8086,
+        },
+      }
+    }
     class {'::contrail::analyticsdatabase':
       analyticsdatabase_params => {
         'auth_host'             => $auth_host,
@@ -167,15 +195,7 @@ class tripleo::network::contrail::analyticsdatabase(
         'disc_server_port'      => $disc_server_port,
         'kafka_hostnames'       => $kafka_hostnames,
         'zookeeper_server_ips'  => $zookeeper_server_ips,
-        database_nodemgr_config => {
-          'DEFAULT'   => {
-            'hostip' => $host_ip,
-          },
-          'DISCOVERY' => {
-            'port'   => $disc_server_port,
-            'server' => $disc_server_ip,
-          },
-        },
+        database_nodemgr_config => $nodemgr_config,
         vnc_api_lib_config      => $vnc_api_lib_config,
       }
     }
