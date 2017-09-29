@@ -119,6 +119,7 @@ class tripleo::network::contrail::database(
   $api_port              = hiera('contrail::api_port'),
   $auth_host             = hiera('contrail::auth_host'),
   $cassandra_servers     = hiera('contrail_database_node_ips'),
+  $configdb_min_disk_gb  = hiera('contrail_configdb_min_disk_gb',undef),
   $contrail_version      = hiera('contrail::contrail_version',4),
   $disc_server_ip        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port      = hiera('contrail::disc_server_port'),
@@ -133,41 +134,51 @@ class tripleo::network::contrail::database(
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
   if $step == 2 {
     if $contrail_version == 3 {
-      $nodemgr_config = {
-        'DEFAULT'   => {
-          'hostip' => $host_ip,
-        },
+      $nodemgr_default_name = 'DEFAULT'
+      $nodemgr_config_ver_specific = {
         'DISCOVERY' => {
           'server'   => $disc_server_ip,
           'port'     => $disc_server_port,
         },
       }
     } else {
-      $nodemgr_config = {
-        'DEFAULT'   => {
-          'hostip' => $host_ip,
-        },
+      $nodemgr_default_name = 'DEFAULTS'
+      $nodemgr_config_ver_specific = {
         'COLLECTOR' => {
           'server_list'   => $collector_server_list_8086,
         },
       }
     }
+    $nodemgr_config_default = $configdb_min_disk_gb ? {
+      undef   => {
+        "${nodemgr_default_name}" => {
+          'hostip'          => $host_ip,
+        },
+      },
+      default => {
+        "${nodemgr_default_name}" => {
+          'hostip'          => $host_ip,
+          'minimum_diskGB'  => $configdb_min_disk_gb,
+        },
+      }
+    }
+    $nodemgr_config = deep_merge($nodemgr_config_default, $nodemgr_config_ver_specific)
     class {'::contrail::database':
       database_params => {
-        'auth_host'             => $auth_host,
-        'api_server'            => $api_server,
-        'admin_password'        => $admin_password,
-        'admin_tenant_name'     => $admin_tenant_name,
-        'admin_token'           => $admin_token,
-        'admin_user'            => $admin_user,
-        'cassandra_servers'     => $cassandra_servers,
-        'host_ip'               => $host_ip,
-        'disc_server_ip'        => $disc_server_ip,
-        'disc_server_port'      => $disc_server_port,
-        'zookeeper_client_ip'   => $zookeeper_client_ip,
-        'zookeeper_hostnames'   => $zookeeper_hostnames,
-        'zookeeper_server_ips'  => $zookeeper_server_ips,
-        database_nodemgr_config => $nodemgr_config,
+        'auth_host'               => $auth_host,
+        'api_server'              => $api_server,
+        'admin_password'          => $admin_password,
+        'admin_tenant_name'       => $admin_tenant_name,
+        'admin_token'             => $admin_token,
+        'admin_user'              => $admin_user,
+        'cassandra_servers'       => $cassandra_servers,
+        'host_ip'                 => $host_ip,
+        'disc_server_ip'          => $disc_server_ip,
+        'disc_server_port'        => $disc_server_port,
+        'zookeeper_client_ip'     => $zookeeper_client_ip,
+        'zookeeper_hostnames'     => $zookeeper_hostnames,
+        'zookeeper_server_ips'    => $zookeeper_server_ips,
+        'database_nodemgr_config' => $nodemgr_config,
       }
     }
   }
