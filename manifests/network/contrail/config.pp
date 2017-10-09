@@ -217,45 +217,50 @@
 #
 class tripleo::network::contrail::config(
   $step  = hiera('step'),
-  $aaa_mode               = hiera('contrail::aaa_mode'),
-  $admin_password         = hiera('contrail::admin_password'),
-  $admin_tenant_name      = hiera('contrail::admin_tenant_name'),
-  $admin_token            = hiera('contrail::admin_token'),
-  $admin_user             = hiera('contrail::admin_user'),
-  $analytics_server_list  = hiera('contrail_analytics_node_ips'),
-  $api_server             = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $api_port               = hiera('contrail::api_port'),
-  $auth                   = hiera('contrail::auth'),
-  $auth_host              = hiera('contrail::auth_host'),
-  $auth_port              = hiera('contrail::auth_port'),
-  $auth_protocol          = hiera('contrail::auth_protocol'),
-  $cassandra_server_list  = hiera('contrail_database_node_ips'),
-  $ca_file                = hiera('contrail::service_certificate',false),
-  $cert_file              = hiera('contrail::service_certificate',false),
-  $config_hostnames       = hiera('contrail_config_short_node_names'),
-  $control_server_list    = hiera('contrail_control_node_ips'),
-  $contrail_version       = hiera('contrail::contrail_version',4),
-  $disc_server_ip         = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $disc_server_port       = hiera('contrail::disc_server_port'),
-  $host_ip                = hiera('contrail::config::host_ip'),
-  $ifmap_password         = hiera('contrail::config::ifmap_password',false),
-  $ifmap_server_ip        = hiera('contrail::config::host_ip'),
-  $ifmap_username         = hiera('contrail::config::ifmap_username',false),
-  $insecure               = hiera('contrail::insecure'),
-  $ipfabric_service_port  = 8775,
-  $listen_ip_address      = hiera('contrail::config::listen_ip_address'),
-  $listen_port            = hiera('contrail::api_port'),
-  $linklocal_service_port = 80,
-  $linklocal_service_name = 'metadata',
-  $linklocal_service_ip   = '169.254.169.254',
-  $memcached_servers      = hiera('contrail::memcached_server'),
-  $internal_vip            = hiera('internal_api_virtual_ip'),
-  $rabbit_server          = hiera('rabbitmq_node_ips'),
-  $rabbit_user            = hiera('contrail::rabbit_user'),
-  $rabbit_password        = hiera('contrail::rabbit_password'),
-  $rabbit_port            = hiera('contrail::rabbit_port'),
-  $redis_server           = hiera('contrail::config::redis_server'),
-  $zk_server_ip           = hiera('contrail_database_node_ips'),
+  $aaa_mode                     = hiera('contrail::aaa_mode'),
+  $admin_password               = hiera('contrail::admin_password'),
+  $admin_tenant_name            = hiera('contrail::admin_tenant_name'),
+  $admin_token                  = hiera('contrail::admin_token'),
+  $admin_user                   = hiera('contrail::admin_user'),
+  $analytics_server_list        = hiera('contrail_analytics_node_ips'),
+  $api_server                   = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $api_port                     = hiera('contrail::api_port'),
+  $auth                         = hiera('contrail::auth'),
+  $auth_host                    = hiera('contrail::auth_host'),
+  $auth_port                    = hiera('contrail::auth_port'),
+  $auth_protocol                = hiera('contrail::auth_protocol'),
+  $auth_version                 = hiera('contrail::auth_version',2),
+  $cassandra_server_list        = hiera('contrail_database_node_ips'),
+  $ca_file                      = hiera('contrail::service_certificate',false),
+  $cert_file                    = hiera('contrail::service_certificate',false),
+  $config_hostnames             = hiera('contrail_config_short_node_names'),
+  $control_server_list          = hiera('contrail_control_node_ips'),
+  $contrail_version             = hiera('contrail::contrail_version',4),
+  $disc_server_ip               = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $disc_server_port             = hiera('contrail::disc_server_port'),
+  $host_ip                      = hiera('contrail::config::host_ip'),
+  $ifmap_password               = hiera('contrail::config::ifmap_password',false),
+  $ifmap_server_ip              = hiera('contrail::config::host_ip'),
+  $ifmap_username               = hiera('contrail::config::ifmap_username',false),
+  $insecure                     = hiera('contrail::insecure'),
+  $ipfabric_service_port        = 8775,
+  $listen_ip_address            = hiera('contrail::config::listen_ip_address'),
+  $listen_port                  = hiera('contrail::api_port'),
+  $linklocal_service_port       = 80,
+  $linklocal_service_name       = 'metadata',
+  $linklocal_service_ip         = '169.254.169.254',
+  $internal_vip                 = hiera('internal_api_virtual_ip'),
+  $keystone_auth_type           = hiera('contrail::keystone_auth_type','password'),
+  $keystone_project_domain_name = hiera('contrail::keystone_project_domain_name','Default'),
+  $keystone_region              = hiera('contrail::keystone_region','regionOne'),
+  $keystone_user_domain_name    = hiera('contrail::keystone_user_domain_name','Default'),
+  $memcached_servers            = hiera('contrail::memcached_server'),
+  $rabbit_server                = hiera('rabbitmq_node_ips'),
+  $rabbit_user                  = hiera('contrail::rabbit_user'),
+  $rabbit_password              = hiera('contrail::rabbit_password'),
+  $rabbit_port                  = hiera('contrail::rabbit_port'),
+  $redis_server                 = hiera('contrail::config::redis_server'),
+  $zk_server_ip                 = hiera('contrail_database_node_ips'),
 )
 {
   validate_ip_address($listen_ip_address)
@@ -269,9 +274,24 @@ class tripleo::network::contrail::config(
   $rabbit_server_list_5672 = join([join($rabbit_server, ':5672,'),':5672'],'')
   $zk_server_ip_2181 = join([join($zk_server_ip, ':2181,'),':2181'],'')
   $analytics_server_list_8081 = join([join($analytics_server_list, ':8081 '),':8081'],'')
-
+  if $auth_version == 2 {
+    $keystone_config_ver = {}
+    $auth_url_suffix = 'v2.0'
+    $vnc_authn_url = "/v2.0/tokens"
+  } else {
+    $keystone_config_ver = {
+      'KEYSTONE' => {
+        'auth_type'               => $keystone_auth_type,
+        'project_domain_name'     => $keystone_project_domain_name,
+        'user_domain_name'        => $keystone_user_domain_name,
+      },
+    }
+    $auth_url_suffix = 'v3'
+    $vnc_authn_url = "/v3/auth/tokens"
+  }
+  $auth_url = "${auth_protocol}://${auth_host}:${auth_port}/${auth_url_suffix}"
   if $auth_protocol == 'https' {
-    $keystone_config = {
+    $keystone_config_proto = {
       'KEYSTONE' => {
         'admin_password'    => $admin_password,
         'admin_tenant_name' => $admin_tenant_name,
@@ -279,10 +299,12 @@ class tripleo::network::contrail::config(
         'auth_host'         => $auth_host,
         'auth_port'         => $auth_port,
         'auth_protocol'     => $auth_protocol,
+        'auth_url'          => $auth_url,
         'insecure'          => $insecure,
         'memcached_servers' => $memcached_servers,
         'certfile'          => $cert_file,
         'cafile'            => $ca_file,
+        'region_name'       => $keystone_region,
       },
     }
     $vnc_api_lib_config = {
@@ -290,12 +312,13 @@ class tripleo::network::contrail::config(
         'AUTHN_SERVER'   => $auth_host,
         'AUTHN_PORT'     => $auth_port,
         'AUTHN_PROTOCOL' => $auth_protocol,
+        'AUTHN_URL'      => $vnc_authn_url,
         'certfile'       => $cert_file,
         'cafile'         => $ca_file,
       },
     }
   } else {
-    $keystone_config = {
+    $keystone_config_proto = {
       'KEYSTONE' => {
         'admin_password'    => $admin_password,
         'admin_tenant_name' => $admin_tenant_name,
@@ -303,16 +326,20 @@ class tripleo::network::contrail::config(
         'auth_host'         => $auth_host,
         'auth_port'         => $auth_port,
         'auth_protocol'     => $auth_protocol,
+        'auth_url'          => $auth_url,
         'insecure'          => $insecure,
         'memcached_servers' => $memcached_servers,
+        'region_name'       => $keystone_region,
       },
     }
     $vnc_api_lib_config = {
       'auth' => {
         'AUTHN_SERVER' => $auth_host,
+        'AUTHN_URL'    => $vnc_authn_url,
       },
     }
   }
+  $keystone_config = deep_merge($keystone_config_proto, $keystone_config_ver)
   if $step >= 3 {
     if $contrail_version == 3 {
       class {'::contrail::config':
@@ -339,8 +366,8 @@ class tripleo::network::contrail::config(
         basicauthusers_property => $basicauthusers_property,
         config_nodemgr_config   => {
           'DISCOVERY' => {
-            'server'   => $disc_server_ip,
-            'port'     => $disc_server_port,
+            'server'                => $disc_server_ip,
+            'port'                  => $disc_server_port,
           },
         },
         device_manager_config   => {
@@ -420,7 +447,7 @@ class tripleo::network::contrail::config(
         },
         config_nodemgr_config   => {
           'COLLECTOR' => {
-            'server_list'   => $collector_server_list_8086,
+            'server_list'           => $collector_server_list_8086,
           },
         },
         device_manager_config   => {

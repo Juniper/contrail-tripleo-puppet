@@ -120,27 +120,28 @@
 #  Defaults to hiera('contrail_database_node_ips')
 #
 class tripleo::network::contrail::analyticsdatabase(
-  $step                  = hiera('step'),
-  $analytics_server_list = hiera('contrail_analytics_node_ips'),
-  $auth_host             = hiera('contrail::auth_host'),
-  $api_server            = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $api_port              = hiera('contrail::api_port'),
-  $admin_password        = hiera('contrail::admin_password'),
-  $admin_tenant_name     = hiera('contrail::admin_tenant_name'),
-  $admin_token           = hiera('contrail::admin_token'),
-  $admin_user            = hiera('contrail::admin_user'),
-  $auth_protocol         = hiera('contrail::auth_protocol'),
-  $cassandra_servers     = hiera('contrail_analytics_database_node_ips'),
-  $ca_file               = hiera('contrail::service_certificate',false),
-  $cert_file             = hiera('contrail::service_certificate',false),
-  $contrail_version      = hiera('contrail::contrail_version',4),
-  $disc_server_ip        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $disc_server_port      = hiera('contrail::disc_server_port'),
-  $host_ip               = hiera('contrail::analytics::database::host_ip'),
-  $host_name             = $::hostname,
-  $kafka_hostnames       = hiera('contrail_analytics_database_short_node_names', ''),
-  $internal_vip          = hiera('internal_api_virtual_ip'),
-  $zookeeper_server_ips  = hiera('contrail_database_node_ips'),
+  $step                     = hiera('step'),
+  $analytics_server_list    = hiera('contrail_analytics_node_ips'),
+  $auth_host                = hiera('contrail::auth_host'),
+  $api_server               = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $api_port                 = hiera('contrail::api_port'),
+  $admin_password           = hiera('contrail::admin_password'),
+  $admin_tenant_name        = hiera('contrail::admin_tenant_name'),
+  $admin_token              = hiera('contrail::admin_token'),
+  $admin_user               = hiera('contrail::admin_user'),
+  $auth_protocol            = hiera('contrail::auth_protocol'),
+  $cassandra_servers        = hiera('contrail_analytics_database_node_ips'),
+  $ca_file                  = hiera('contrail::service_certificate',false),
+  $cert_file                = hiera('contrail::service_certificate',false),
+  $analyticsdb_min_disk_gb  = hiera('contrail_analyticsdb_min_disk_gb',undef),
+  $contrail_version         = hiera('contrail::contrail_version',4),
+  $disc_server_ip           = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $disc_server_port         = hiera('contrail::disc_server_port'),
+  $host_ip                  = hiera('contrail::analytics::database::host_ip'),
+  $host_name                = $::hostname,
+  $kafka_hostnames          = hiera('contrail_analytics_database_short_node_names', ''),
+  $internal_vip             = hiera('internal_api_virtual_ip'),
+  $zookeeper_server_ips     = hiera('contrail_database_node_ips'),
 )
 {
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
@@ -163,25 +164,35 @@ class tripleo::network::contrail::analyticsdatabase(
   }
   if $step == 2 {
     if $contrail_version == 3 {
-      $nodemgr_config = {
-        'DEFAULT'   => {
-          'hostip' => $host_ip,
-        },
+      $nodemgr_default_name = 'DEFAULT'
+      $nodemgr_ver_specific = {
         'DISCOVERY' => {
           'server'   => $disc_server_ip,
           'port'     => $disc_server_port,
         },
       }
     } else {
-      $nodemgr_config = {
-        'DEFAULTS'   => {
-          'hostip' => $host_ip,
-        },
+      $nodemgr_default_name = 'DEFAULTS'
+      $nodemgr_ver_specific = {
         'COLLECTOR' => {
-          'server_list'   => $collector_server_list_8086,
+          'server_list' => $collector_server_list_8086,
         },
       }
     }
+    $nodemgr_default = $analyticsdb_min_disk_gb ? {
+      undef   => {
+        "${nodemgr_default_name}" => {
+          'hostip'          => $host_ip,
+        },
+      },
+      default => {
+        "${nodemgr_default_name}" => {
+          'hostip'          => $host_ip,
+          'minimum_diskGB'  => $analyticsdb_min_disk_gb,
+        },
+      }
+    }
+    $nodemgr_config = deep_merge($nodemgr_default, $nodemgr_ver_specific)
     class {'::contrail::analyticsdatabase':
       analyticsdatabase_params => {
         'auth_host'             => $auth_host,
