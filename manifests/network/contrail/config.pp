@@ -512,7 +512,7 @@ class tripleo::network::contrail::config(
       class {'::contrail::config::provision_linklocal':
         api_address                => $api_server,
         api_port                   => $api_port,
-        ipfabric_service_ip        => $api_server,
+        ipfabric_service_ip        => $internal_vip,
         ipfabric_service_port      => $ipfabric_service_port,
         keystone_admin_user        => $admin_user,
         keystone_admin_password    => $admin_password,
