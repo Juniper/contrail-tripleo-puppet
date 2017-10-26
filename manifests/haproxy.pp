@@ -1019,28 +1019,44 @@ class tripleo::haproxy (
   }
 
  if $contrail_webui {
+    $contrail_webui_listen_options = {
+      'balance'       => 'roundrobin',
+      'cookie'        => 'SERVERID insert indirect nocache',
+    }
+    $contrail_webui_member_options = union($haproxy_member_options, ["cookie ${::hostname}"])
     ::tripleo::haproxy::endpoint { 'contrail_webui_http':
       public_virtual_ip => $public_virtual_ip,
       internal_ip       => hiera('contrail_webui_vip', hiera('internal_api_virtual_ip')),
       service_port      => $ports[contrail_webui_http_port],
       ip_addresses      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
-      server_names      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
+      server_names      => hiera('contrail_config_node_names', $contrail_config_node_names),
       public_ssl_port   => $ports[contrail_webui_http_port],
+      mode              => 'http',
+      listen_options    => $contrail_webui_listen_options,
+      member_options    => $contrail_webui_member_options,
     }
-  }
-
- if $contrail_webui {
+    if $service_certificate {
+      $contrail_webui_https_mode = 'http'
+      $contrail_webui_https_listen_options = $contrail_webui_listen_options
+      $contrail_webui_https_member_options = union($contrail_webui_member_options, ['ssl verify none'])
+    } else {
+      $contrail_webui_https_mode = 'tcp'
+      $contrail_webui_https_listen_options = {
+        'balance'   => 'source',
+        'hash-type' => 'consistent',
+      }
+      $contrail_webui_https_member_options = $haproxy_member_options
+    }
     ::tripleo::haproxy::endpoint { 'contrail_webui_https':
       public_virtual_ip => $public_virtual_ip,
       internal_ip       => hiera('contrail_webui_vip', hiera('internal_api_virtual_ip')),
       service_port      => $ports[contrail_webui_https_port],
       ip_addresses      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
-      server_names      => hiera('contrail_config_node_ips', $contrail_config_node_ips),
+      server_names      => hiera('contrail_config_node_names', $contrail_config_node_names),
       public_ssl_port   => $ports[contrail_webui_https_port],
-      listen_options    => {
-          'balance'   => 'source',
-          'hash-type' => 'consistent',
-      }
+      mode              => $contrail_webui_https_mode,
+      listen_options    => $contrail_webui_https_listen_options,
+      member_options    => $contrail_webui_https_member_options,
     }
   }
 
