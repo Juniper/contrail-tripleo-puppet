@@ -65,7 +65,7 @@
 #  Defaults to 'False'
 #
 class tripleo::network::contrail::heat(
-  $step = hiera('step'),
+  $step                   = Integer(hiera('step')),
   $admin_password         = hiera('contrail::admin_password'),
   $admin_token            = hiera('contrail::admin_token'),
   $admin_user             = hiera('contrail::admin_user'),

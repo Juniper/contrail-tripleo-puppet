@@ -54,6 +54,11 @@
 #  String value.
 #  Defaults to hiera('contrail::auth_protocol')
 #
+# [*auth_version*]
+#  (optional) authentication protocol version.
+#  Integer value.
+#  Defaults to hiera('contrail::auth_version',2)
+#
 # [*cert_file*]
 #  (optional) cert file name
 #  String value.

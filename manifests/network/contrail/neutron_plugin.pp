@@ -52,6 +52,11 @@
 #  String value.
 #  Defaults to hiera('contrail::auth_protocol')
 #
+# [*auth_version*]
+#  (optional) authentication protocol version.
+#  Integer value.
+#  Defaults to hiera('contrail::auth_version',2)
+#
 # [*ca_file*]
 #  (optional) ca file name
 #  String value.
@@ -79,6 +84,16 @@
 #       contrail_extensions => ['ipam:neutron_plugin_contrail.plugins.opencontrail.contrail_plugin_ipam.NeutronPluginContrailIpam']
 #     }
 #
+# [*contrail_version*]
+#  (optional) contrail version.
+#  Integer value.
+#  Defaults to hiera('contrail::contrail_version',4)
+#
+# [*insecure*]
+#  (optional) insecure connections allowed
+#  String value.
+#  Defaults to hiera('contrail::insecure')
+#
 # [*keystone_auth_url*]
 #   Url of the keystone auth server
 #   Defaults to $::os_service_default
@@ -98,6 +113,26 @@
 # [*keystone_admin_token*]
 #   Admin token
 #   Defaults to $::os_service_default
+#
+# [*keystone_auth_type*]
+#  (optional) keystone auth type.
+#  String value.
+#  Defaults to hiera('contrail::keystone_auth_type','password')
+#
+# [*keystone_project_domain_name*]
+#  (optional) keystone project domain name.
+#  String value.
+#  Defaults to hiera('contrail::keystone_project_domain_name','Default')
+#
+# [*keystone_region*]
+#  (optional) keystone region.
+#  String value.
+#  Defaults to hiera('contrail::keystone_region','regionOne')
+#
+# [*keystone_user_domain_name*]
+#  (optional) keystone user domain name.
+#  String value.
+#  Defaults to hiera('contrail::keystone_user_domain_name','Default')
 #
 # [*package_ensure*]
 #   (optional) Ensure state for package.
@@ -214,12 +249,12 @@ class tripleo::network::contrail::neutron_plugin (
 
   if $auth_version == 2 {
     $auth_url_suffix = '/v2.0'
-    $api_srv_auth_url_suffix = "/v2.0/tokens"
-    $vnc_authn_url = "/v2.0/tokens"
+    $api_srv_auth_url_suffix = '/v2.0/tokens'
+    $vnc_authn_url = '/v2.0/tokens'
   } else {
     $auth_url_suffix = '/v3'
-    $api_srv_auth_url_suffix = "/v3/auth/tokens"
-    $vnc_authn_url = "/v3/auth/tokens"
+    $api_srv_auth_url_suffix = '/v3/auth/tokens'
+    $vnc_authn_url = '/v3/auth/tokens'
   }
   $vnc_api_lib_config_common = {
     'auth' => {
