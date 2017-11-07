@@ -147,6 +147,7 @@ class tripleo::network::contrail::control(
   $contrail_version      = hiera('contrail::contrail_version',4),
   $disc_server_ip        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port      = hiera('contrail::disc_server_port'),
+  $encap_priority        = hiera('contrail::control::encap_priority', 'MPLSoUDP,MPLSoGRE,VXLAN'),
   $host_ip               = hiera('contrail::control::host_ip'),
   $ibgp_auto_mesh        = true,
   $ifmap_password        = hiera('contrail::control::host_ip'),
@@ -161,6 +162,7 @@ class tripleo::network::contrail::control(
   $router_asn            = hiera('contrail::control::asn'),
   $secret                = hiera('contrail::control::rndc_secret'),
   $manage_named          = hiera('contrail::control::manage_named'),
+  $vxlan_vn_id_mode      = hiera('contrail::control::vxlan_vn_id_mode', undef),
 )
 {
   $control_ifmap_user     = "${ifmap_username}.control"
@@ -264,6 +266,15 @@ class tripleo::network::contrail::control(
       keystone_admin_password    => $admin_password,
       keystone_admin_tenant_name => $admin_tenant_name,
       router_asn                 => $router_asn,
+    } ->
+    class {'::contrail::control::provision_encap':
+      api_address                => $api_server,
+      api_port                   => $api_port,
+      encap_priority             => $encap_priority,
+      vxlan_vn_id_mode           => $vxlan_vn_id_mode,
+      keystone_admin_user        => $admin_user,
+      keystone_admin_password    => $admin_password,
+      keystone_admin_tenant_name => $admin_tenant_name,
     }
   }
 }
