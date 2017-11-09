@@ -72,11 +72,6 @@
 #  String value.
 #  Defaults to hiera('contrail::auth_protocol')
 #
-# [*auth_version*]
-#  (optional) authentication protocol version.
-#  Integer value.
-#  Defaults to hiera('contrail::auth_version',2)
-#
 # [*ca_file*]
 #  (optional) ca file name
 #  String value.
@@ -91,11 +86,6 @@
 #  (optional) Contrail control server IP
 #  Array of String (IPv4) value.
 #  Defaults to hiera('contrail_control_node_ips')
-#
-# [*contrail_version*]
-#  (optional) contrail version.
-#  Integer value.
-#  Defaults to hiera('contrail::contrail_version',4)
 #
 # [*disc_server_ip*]
 #  (optional) IPv4 address of discovery server.
@@ -127,26 +117,6 @@
 #  String value.
 #  Defaults to hiera('contrail::insecure')
 #
-# [*keystone_auth_type*]
-#  (optional) keystone auth type.
-#  String value.
-#  Defaults to hiera('contrail::keystone_auth_type','password')
-#
-# [*keystone_project_domain_name*]
-#  (optional) keystone project domain name.
-#  String value.
-#  Defaults to hiera('contrail::keystone_project_domain_name','Default')
-#
-# [*keystone_region*]
-#  (optional) keystone region.
-#  String value.
-#  Defaults to hiera('contrail::keystone_region','regionOne')
-#
-# [*keystone_user_domain_name*]
-#  (optional) keystone user domain name.
-#  String value.
-#  Defaults to hiera('contrail::keystone_user_domain_name','Default')
-#
 # [*memcached_servers*]
 #  (optional) memcached server ip
 #  String (IPv4) value.
@@ -167,11 +137,6 @@
 #  String value.
 #  Defaults to hiera('contrail::vrouter::physical_interface')
 #
-# [*ssl_enabled*]
-#  (optional) SSL should be used in internal Contrail services communications
-#  Boolean value.
-#  Defaults to hiera('contrail_ssl_enabled', false)
-#
 # [*internal_vip*]
 #  (optional) Public VIP to Keystone
 #  String (IPv4) value.
@@ -188,7 +153,7 @@
 #  Defaults to hiera('contrail::vrouter::is_dpdk',false)
 #
 class tripleo::network::contrail::vrouter (
-  $step                         = Integer(hiera('step')),
+  $step                         = hiera('step'),
   $admin_password               = hiera('contrail::admin_password'),
   $admin_tenant_name            = hiera('contrail::admin_tenant_name'),
   $admin_token                  = hiera('contrail::admin_token'),
@@ -219,33 +184,25 @@ class tripleo::network::contrail::vrouter (
   $physical_interface           = hiera('contrail::vrouter::physical_interface'),
   $internal_vip                 = hiera('internal_api_virtual_ip'),
   $is_tsn                       = hiera('contrail::vrouter::is_tsn',false),
-  $tsn_evpn_mode                = hiera('contrail::vrouter::tsn_evpn_mode', false),
-  $tsn_server_list              = hiera('contrail_tsn_node_ips', []),
   $is_dpdk                      = hiera('contrail::vrouter::is_dpdk',false),
   $dpdk_driver                  = hiera('contrail::vrouter::dpdk_driver',false),
   $ssl_enabled                  = hiera('contrail_ssl_enabled', false)
 ) {
   $cidr = netmask_to_cidr($netmask)
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
-  if size(hiera('contrail::vrouter::control_node_ips')) == 0 {
-    if size($control_server) == 0 {
-      $control_server_list = ''
-      $control_server_list_53 = ''
-      $control_server_list_5269 = ''
-    } else {
-      $control_server_list = join($control_server, ' ')
-      $control_server_list_53 = join([join($control_server, ':53 '),':53'],'')
-      $control_server_list_5269 = join([join($control_server, ':5269 '),':5269'],'')
-    }
+  if size($control_server) == 0 {
+    $control_server_list = ''
+    $control_server_list_53 = ''
+    $control_server_list_5269 = ''
   } else {
-    $control_server_list = join(hiera('contrail::vrouter::control_node_ips'), ' ')
-    $control_server_list_53 = join([join(hiera('contrail::vrouter::control_node_ips'), ':53 '),':53'],'')
-    $control_server_list_5269 = join([join(hiera('contrail::vrouter::control_node_ips'), ':5269 '),':5269'],'')
+    $control_server_list = join($control_server, ' ')
+    $control_server_list_53 = join([join($control_server, ':53 '),':53'],'')
+    $control_server_list_5269 = join([join($control_server, ':5269 '),':5269'],'')
   }
   if $auth_version == 2 {
     $keystone_config_ver = {}
     $auth_url_suffix = 'v2.0'
-    $vnc_authn_url = '/v2.0/tokens'
+    $vnc_authn_url = "/v2.0/tokens"
   } else {
     $keystone_config_ver = {
       'KEYSTONE' => {
@@ -255,7 +212,7 @@ class tripleo::network::contrail::vrouter (
       },
     }
     $auth_url_suffix = 'v3'
-    $vnc_authn_url = '/v3/auth/tokens'
+    $vnc_authn_url = "/v3/auth/tokens"
   }
   $auth_url = "${auth_protocol}://${auth_host}:${auth_port}/${auth_url_suffix}"
   $keystone_config_common = {
@@ -353,8 +310,8 @@ class tripleo::network::contrail::vrouter (
     if $auth_host and $auth_host != '' {
       $vnc_api_lib_config_type = {
         'auth' => {
-          'AUTHN_TYPE'          => 'keystone',
-          'insecure'            => $insecure,
+          'AUTHN_TYPE'      => 'keystone',
+          'insecure'        => $insecure,
         },
       }
     } else {
@@ -391,24 +348,9 @@ class tripleo::network::contrail::vrouter (
     $macaddress = generate('/bin/cat','/etc/contrail/dpdk_mac')
   }
   if $is_tsn {
-    if $tsn_evpn_mode {
-      $agent_mode = 'tsn-no-forwarding'
-      if size($tsn_server_list) <= 2 {
-        $tsn_servers = $tsn_server_list
-      } else {
-        $tsn_servers = hiera('contrail::vrouter::tsn_servers', [])
-      }
-      if empty($tsn_servers) {
-        fail('TSN server list is empty')
-      }
-    } else {
-      $agent_mode = 'tsn'
-      $tsn_servers = []
-    }
     $vrouter_agent_config_mode_specific = {
       'DEFAULT'  => {
-        'agent_mode'  => $agent_mode,
-        'tsn_servers' => join($tsn_servers, ' ')
+        'agent_mode' => 'tsn',
       },
     }
   } elsif $is_dpdk {
