@@ -190,20 +190,14 @@ class tripleo::network::contrail::vrouter (
 ) {
   $cidr = netmask_to_cidr($netmask)
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
-  if size(hiera('contrail::vrouter::control_node_ips')) == 0 {
-    if size($control_server) == 0 {
-      $control_server_list = ''
-      $control_server_list_53 = ''
-      $control_server_list_5269 = ''
-    } else {
-      $control_server_list = join($control_server, ' ')
-      $control_server_list_53 = join([join($control_server, ':53 '),':53'],'')
-      $control_server_list_5269 = join([join($control_server, ':5269 '),':5269'],'')
-    }
+  if size($control_server) == 0 {
+    $control_server_list = ''
+    $control_server_list_53 = ''
+    $control_server_list_5269 = ''
   } else {
-    $control_server_list = join(hiera('contrail::vrouter::control_node_ips'), ' ')
-    $control_server_list_53 = join([join(hiera('contrail::vrouter::control_node_ips'), ':53 '),':53'],'')
-    $control_server_list_5269 = join([join(hiera('contrail::vrouter::control_node_ips'), ':5269 '),':5269'],'')
+    $control_server_list = join($control_server, ' ')
+    $control_server_list_53 = join([join($control_server, ':53 '),':53'],'')
+    $control_server_list_5269 = join([join($control_server, ':5269 '),':5269'],'')
   }
   if $auth_version == 2 {
     $keystone_config_ver = {}
