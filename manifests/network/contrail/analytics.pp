@@ -440,7 +440,7 @@ class tripleo::network::contrail::analytics(
         },
         analytics_api_config     => {
           'DEFAULTS'  => {
-            'api_server'            => $api_server,
+            'api_server'            => $config_api_server_list_8082,
             'aaa_mode'              => $analytics_aaa_mode,
             'cassandra_server_list' => $cassandra_server_list_9042,
             'collectors'            => $collector_server_list_8086,
@@ -448,7 +448,6 @@ class tripleo::network::contrail::analytics(
             'http_server_port'      => $http_server_port,
             'rest_api_ip'           => $rest_api_ip,
             'rest_api_port'         => $rest_api_port,
-            'api_server'            => $config_api_server_list_8082,
             'zk_list'               => $zk_server_ip_2181,
           },
           'REDIS'     => {
