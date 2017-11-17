@@ -64,6 +64,16 @@
 #  Array of strings value.
 #  Defaults to hiera('contrail_database_node_ips')
 #
+# [*configdb_min_disk_gb*]
+#  (optional) min size for Contrail config DB.
+#  Integer value.
+#  Defaults to hiera('contrail_configdb_min_disk_gb',undef),
+#
+# [*contrail_version*]
+#  (optional) contrail version.
+#  Integer value.
+#  Defaults to hiera('contrail::contrail_version',4)
+#
 # [*disc_server_ip*]
 #  (optional) IPv4 address of discovery server.
 #  String (IPv4) value.
@@ -109,7 +119,7 @@
 #  Defaults to hiera('contrail_database_node_ips')
 #
 class tripleo::network::contrail::database(
-  $step                  = hiera('step'),
+  $step                  = Integer(hiera('step')),
   $admin_password        = hiera('contrail::admin_password'),
   $admin_tenant_name     = hiera('contrail::admin_tenant_name'),
   $admin_token           = hiera('contrail::admin_token'),

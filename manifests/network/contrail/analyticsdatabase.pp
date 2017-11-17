@@ -64,6 +64,21 @@
 #  String value
 #  Defaults to hiera('contrail::admin_user')
 #
+# [*analytics_server_list*]
+#  (optional) list of analytics server
+#  Array of String values.
+#  Defaults to hiera('contrail_analytics_node_ips')
+#
+# [*analyticsdb_min_disk_gb*]
+#  (optional) min size for Contrail Analytics DB.
+#  Integer value.
+#  Defaults to hiera('contrail_analyticsdb_min_disk_gb')
+#
+# [*contrail_version*]
+#  (optional) contrail version.
+#  Integer value.
+#  Defaults to hiera('contrail::contrail_version',4)
+#
 # [*ca_file*]
 #  (optional) ca file name
 #  String value.
@@ -120,7 +135,7 @@
 #  Defaults to hiera('contrail_database_node_ips')
 #
 class tripleo::network::contrail::analyticsdatabase(
-  $step                     = hiera('step'),
+  $step                     = Integer(hiera('step')),
   $analytics_server_list    = hiera('contrail_analytics_node_ips'),
   $auth_host                = hiera('contrail::auth_host'),
   $api_server               = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
