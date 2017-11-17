@@ -67,6 +67,16 @@
 #  (optional) authentication protocol.
 #  Defaults to hiera('contrail::auth_protocol'),
 #
+# [*config_server_list*]
+#  (optional) List IPs+port of Config servers
+#  Array of strings value.
+#  Defaults to hiera('contrail_config_node_ips')
+#
+# [*contrail_version*]
+#  (optional) contrail version.
+#  Integer value.
+#  Defaults to hiera('contrail::contrail_version',4)
+#
 # [*disc_server_ip*]
 #  (optional) IPv4 address of discovery server.
 #  String (IPv4) value.
@@ -116,6 +126,26 @@
 #  String (IPv4) value
 #  Defaults to hiera('internal_api_virtual_ip')
 #
+# [*rabbit_server*]
+#  (optional) IPv4 addresses of rabbit server.
+#  Array of String (IPv4) value.
+#  Defaults to hiera('rabbitmq_node_ips')
+#
+# [*rabbit_password*]
+#  (optional) Rabbit password
+#  String value.
+#  Defaults to hiera('contrail::rabbit_password')
+#
+# [*rabbit_port*]
+#  (optional) port of rabbit server
+#  String value.
+#  Defaults to hiera('contrail::rabbit_port')
+#
+# [*rabbit_user*]
+#  (optional) Rabbit user
+#  String value.
+#  Defaults to hiera('contrail::rabbit_user')
+#
 # [*router_asn*]
 #  (optional) Autonomus System Number
 #  String value
@@ -132,7 +162,7 @@
 #  Defaults to hiera('step')
 #
 class tripleo::network::contrail::control(
-  $step                  = hiera('step'),
+  $step                  = Integer(hiera('step')),
   $admin_password        = hiera('contrail::admin_password'),
   $admin_tenant_name     = hiera('contrail::admin_tenant_name'),
   $admin_token           = hiera('contrail::admin_token'),
@@ -208,8 +238,8 @@ class tripleo::network::contrail::control(
         },
         control_nodemgr_config => {
           'DISCOVERY' => {
-            'server'   => $disc_server_ip,
-            'port'     => $disc_server_port,
+            'server' => $disc_server_ip,
+            'port'   => $disc_server_port,
           },
         }
       }
@@ -219,31 +249,31 @@ class tripleo::network::contrail::control(
         secret                 => $secret,
         manage_named           => $manage_named,
         control_config         => {
-          'DEFAULT'   => {
+          'DEFAULT'  => {
             'hostip'     => $host_ip,
             'collectors' => $collector_server_list_8086,
           },
-          'CONFIGDB'   => {
-            'rabbitmq_server_list' => $rabbit_server_list_5672,
-            'rabbitmq_user' => $rabbit_user,
-            'rabbitmq_password' => $rabbit_password,
-            'rabbitmq_vhost' => '/',
-            'rabbitmq_use_ssl' => 'False',
+          'CONFIGDB' => {
+            'rabbitmq_server_list'  => $rabbit_server_list_5672,
+            'rabbitmq_user'         => $rabbit_user,
+            'rabbitmq_password'     => $rabbit_password,
+            'rabbitmq_vhost'        => '/',
+            'rabbitmq_use_ssl'      => 'False',
             'config_db_server_list' => $config_db_server_list_9042,
           },
         },
         dns_config             => {
-          'DEFAULT'   => {
+          'DEFAULT'  => {
             'hostip'      => $host_ip,
             'rndc_secret' => $secret,
-            'collectors' => $collector_server_list_8086,
+            'collectors'  => $collector_server_list_8086,
           },
-          'CONFIGDB'   => {
-            'rabbitmq_server_list' => $rabbit_server_list_5672,
-            'rabbitmq_user' => $rabbit_user,
-            'rabbitmq_password' => $rabbit_password,
-            'rabbitmq_vhost' => '/',
-            'rabbitmq_use_ssl' => 'False',
+          'CONFIGDB' => {
+            'rabbitmq_server_list'  => $rabbit_server_list_5672,
+            'rabbitmq_user'         => $rabbit_user,
+            'rabbitmq_password'     => $rabbit_password,
+            'rabbitmq_vhost'        => '/',
+            'rabbitmq_use_ssl'      => 'False',
             'config_db_server_list' => $config_db_server_list_9042,
           },
         },

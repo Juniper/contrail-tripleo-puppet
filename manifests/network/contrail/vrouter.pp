@@ -72,6 +72,11 @@
 #  String value.
 #  Defaults to hiera('contrail::auth_protocol')
 #
+# [*auth_version*]
+#  (optional) authentication protocol version.
+#  Integer value.
+#  Defaults to hiera('contrail::auth_version',2)
+#
 # [*ca_file*]
 #  (optional) ca file name
 #  String value.
@@ -86,6 +91,11 @@
 #  (optional) Contrail control server IP
 #  Array of String (IPv4) value.
 #  Defaults to hiera('contrail_control_node_ips')
+#
+# [*contrail_version*]
+#  (optional) contrail version.
+#  Integer value.
+#  Defaults to hiera('contrail::contrail_version',4)
 #
 # [*disc_server_ip*]
 #  (optional) IPv4 address of discovery server.
@@ -117,6 +127,26 @@
 #  String value.
 #  Defaults to hiera('contrail::insecure')
 #
+# [*keystone_auth_type*]
+#  (optional) keystone auth type.
+#  String value.
+#  Defaults to hiera('contrail::keystone_auth_type','password')
+#
+# [*keystone_project_domain_name*]
+#  (optional) keystone project domain name.
+#  String value.
+#  Defaults to hiera('contrail::keystone_project_domain_name','Default')
+#
+# [*keystone_region*]
+#  (optional) keystone region.
+#  String value.
+#  Defaults to hiera('contrail::keystone_region','regionOne')
+#
+# [*keystone_user_domain_name*]
+#  (optional) keystone user domain name.
+#  String value.
+#  Defaults to hiera('contrail::keystone_user_domain_name','Default')
+#
 # [*memcached_servers*]
 #  (optional) memcached server ip
 #  String (IPv4) value.
@@ -137,6 +167,11 @@
 #  String value.
 #  Defaults to hiera('contrail::vrouter::physical_interface')
 #
+# [*ssl_enabled*]
+#  (optional) SSL should be used in internal Contrail services communications
+#  Boolean value.
+#  Defaults to hiera('contrail_ssl_enabled', false)
+#
 # [*internal_vip*]
 #  (optional) Public VIP to Keystone
 #  String (IPv4) value.
@@ -153,7 +188,7 @@
 #  Defaults to hiera('contrail::vrouter::is_dpdk',false)
 #
 class tripleo::network::contrail::vrouter (
-  $step                         = hiera('step'),
+  $step                         = Integer(hiera('step')),
   $admin_password               = hiera('contrail::admin_password'),
   $admin_tenant_name            = hiera('contrail::admin_tenant_name'),
   $admin_token                  = hiera('contrail::admin_token'),
@@ -208,7 +243,7 @@ class tripleo::network::contrail::vrouter (
   if $auth_version == 2 {
     $keystone_config_ver = {}
     $auth_url_suffix = 'v2.0'
-    $vnc_authn_url = "/v2.0/tokens"
+    $vnc_authn_url = '/v2.0/tokens'
   } else {
     $keystone_config_ver = {
       'KEYSTONE' => {
@@ -218,7 +253,7 @@ class tripleo::network::contrail::vrouter (
       },
     }
     $auth_url_suffix = 'v3'
-    $vnc_authn_url = "/v3/auth/tokens"
+    $vnc_authn_url = '/v3/auth/tokens'
   }
   $auth_url = "${auth_protocol}://${auth_host}:${auth_port}/${auth_url_suffix}"
   $keystone_config_common = {

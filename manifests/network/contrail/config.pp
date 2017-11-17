@@ -77,6 +77,11 @@
 #  (optional) authentication protocol.
 #  Defaults to hiera('contrail::auth_protocol')
 #
+# [*auth_version*]
+#  (optional) authentication protocol version.
+#  Integer value.
+#  Defaults to hiera('contrail::auth_version',2)
+#
 # [*ca_file*]
 #  (optional) ca file name
 #  String value.
@@ -96,6 +101,11 @@
 #  (optional) Config hostname list
 #  Array of string value.
 #  Defaults to hiera('contrail_config_short_node_names')
+#
+# [*contrail_version*]
+#  (optional) contrail version.
+#  Integer value.
+#  Defaults to hiera('contrail::contrail_version',4)
 #
 # [*control_server_list*]
 #  (optional) IPv4 addresses of control server.
@@ -140,6 +150,26 @@
 #  (optional) linklocal ip fabric port
 #  String value
 #  Defaults to 8775
+#
+# [*keystone_auth_type*]
+#  (optional) keystone auth type.
+#  String value.
+#  Defaults to hiera('contrail::keystone_auth_type','password')
+#
+# [*keystone_project_domain_name*]
+#  (optional) keystone project domain name.
+#  String value.
+#  Defaults to hiera('contrail::keystone_project_domain_name','Default')
+#
+# [*keystone_region*]
+#  (optional) keystone region.
+#  String value.
+#  Defaults to hiera('contrail::keystone_region','regionOne')
+#
+# [*keystone_user_domain_name*]
+#  (optional) keystone user domain name.
+#  String value.
+#  Defaults to hiera('contrail::keystone_user_domain_name','Default')
 #
 # [*listen_ip_address*]
 #  (optional) IP address to listen on.
@@ -216,7 +246,7 @@
 #  Defaults to hiera('contrail_database_node_ips')
 #
 class tripleo::network::contrail::config(
-  $step  = hiera('step'),
+  $step  = Integer(hiera('step')),
   $aaa_mode                     = hiera('contrail::aaa_mode'),
   $admin_password               = hiera('contrail::admin_password'),
   $admin_tenant_name            = hiera('contrail::admin_tenant_name'),
@@ -277,7 +307,7 @@ class tripleo::network::contrail::config(
   if $auth_version == 2 {
     $keystone_config_ver = {}
     $auth_url_suffix = 'v2.0'
-    $vnc_authn_url = "/v2.0/tokens"
+    $vnc_authn_url = '/v2.0/tokens'
   } else {
     $keystone_config_ver = {
       'KEYSTONE' => {
@@ -287,7 +317,7 @@ class tripleo::network::contrail::config(
       },
     }
     $auth_url_suffix = 'v3'
-    $vnc_authn_url = "/v3/auth/tokens"
+    $vnc_authn_url = '/v3/auth/tokens'
   }
   $auth_url = "${auth_protocol}://${auth_host}:${auth_port}/${auth_url_suffix}"
   if $auth_protocol == 'https' {
@@ -366,8 +396,8 @@ class tripleo::network::contrail::config(
         basicauthusers_property => $basicauthusers_property,
         config_nodemgr_config   => {
           'DISCOVERY' => {
-            'server'                => $disc_server_ip,
-            'port'                  => $disc_server_port,
+            'server' => $disc_server_ip,
+            'port'   => $disc_server_port,
           },
         },
         device_manager_config   => {
@@ -429,8 +459,8 @@ class tripleo::network::contrail::config(
       }
     } else {
       class {'::contrail::config':
-        contrail_version        => $contrail_version,
-        api_config              => {
+        contrail_version      => $contrail_version,
+        api_config            => {
           'DEFAULTS' => {
             'aaa_mode'              => $aaa_mode,
             'auth'                  => $auth,
@@ -445,12 +475,12 @@ class tripleo::network::contrail::config(
             'zk_server_ip'          => $zk_server_ip_2181,
           },
         },
-        config_nodemgr_config   => {
+        config_nodemgr_config => {
           'COLLECTOR' => {
             'server_list'           => $collector_server_list_8086,
           },
         },
-        device_manager_config   => {
+        device_manager_config => {
           'DEFAULTS' => {
             'api_server_ip'         => $api_server,
             'api_server_port'       => $api_port,
@@ -463,8 +493,8 @@ class tripleo::network::contrail::config(
             'zk_server_ip'          => $zk_server_ip_2181,
           },
         },
-        keystone_config         => $keystone_config,
-        schema_config           => {
+        keystone_config       => $keystone_config,
+        schema_config         => {
           'DEFAULTS' => {
             'api_server_ip'         => $api_server,
             'api_server_port'       => $api_port,
@@ -477,8 +507,8 @@ class tripleo::network::contrail::config(
             'zk_server_ip'          => $zk_server_ip_2181,
           },
         },
-        svc_monitor_config      => {
-          'DEFAULTS' => {
+        svc_monitor_config    => {
+          'DEFAULTS'  => {
             'api_server_ip'         => $api_server,
             'api_server_port'       => $api_port,
             'cassandra_server_list' => $cassandra_server_list_9160,
@@ -493,7 +523,7 @@ class tripleo::network::contrail::config(
             'analytics_server_list' => $analytics_server_list_8081,
           },
         },
-        vnc_api_lib_config      => $vnc_api_lib_config,
+        vnc_api_lib_config    => $vnc_api_lib_config,
       }
     }
   }
