@@ -236,6 +236,7 @@ class tripleo::network::contrail::analytics(
   $rabbit_user                  = hiera('contrail::rabbit_user'),
   $rabbit_password              = hiera('contrail::rabbit_password'),
   $rabbit_port                  = hiera('contrail::rabbit_port'),
+  $rabbit_vhost                 = hiera('contrail::rabbit_vhost','/'),
   $redis_server                 = hiera('contrail::analytics::redis_server'),
   $redis_server_port            = hiera('contrail::analytics::redis_server_port'),
   $rest_api_ip                  = hiera('contrail::analytics::rest_api_ip'),
@@ -246,6 +247,7 @@ class tripleo::network::contrail::analytics(
   $cassandra_server_list_9042 = join([join($cassandra_server_list, ':9042 '),':9042'],'')
   $config_api_server_list_8082 = join([join($config_server_list, ':8082 '),':8082'],'')
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
+  $config_db_server_list_9042 = join([join($config_server_list, ':9042 '),':9042'],'')
   $redis_server_list_6379 = join([join($analytics_server_list, ':6379 '),':6379'],'')
   $kafka_broker_list_9092 = join([join($kafka_broker_list, ':9092 '),':9092'],'')
   $rabbit_server_list_5672 = join([join($rabbit_server, ':5672,'),':5672'],'')
@@ -424,10 +426,6 @@ class tripleo::network::contrail::analytics(
             'collectors'           => $collector_server_list_8086,
             'host_ip'              => $host_ip,
             'kafka_broker_list'    => $kafka_broker_list_9092,
-            'rabbitmq_server_list' => $rabbit_server_list_no_port,
-            'rabbitmq_port'        => '5672',
-            'rabbitmq_user'        => $rabbit_user,
-            'rabbitmq_password'    => $rabbit_password,
             'zk_list'              => $zk_server_ip_2181,
           },
           'API_SERVER' => {
@@ -447,7 +445,7 @@ class tripleo::network::contrail::analytics(
         },
         analytics_api_config     => {
           'DEFAULTS'  => {
-            'api_server'            => $api_server,
+            'api_server'            => $config_api_server_list_8082,
             'aaa_mode'              => $analytics_aaa_mode,
             'cassandra_server_list' => $cassandra_server_list_9042,
             'collectors'            => $collector_server_list_8086,
@@ -455,7 +453,6 @@ class tripleo::network::contrail::analytics(
             'http_server_port'      => $http_server_port,
             'rest_api_ip'           => $rest_api_ip,
             'rest_api_port'         => $rest_api_port,
-            'api_server'            => $config_api_server_list_8082,
             'zk_list'               => $zk_server_ip_2181,
           },
           'REDIS'     => {
@@ -523,6 +520,12 @@ class tripleo::network::contrail::analytics(
         keystone_config          => {
           'KEYSTONE'     => $keystone_config,
         },
+        rabbitmq_server_list     => $rabbit_server_list_no_port,
+        rabbitmq_port            => '5672',
+        rabbitmq_vhost           => $rabbit_vhost,
+        rabbitmq_user            => $rabbit_user,
+        rabbitmq_password        => $rabbit_password,
+        config_db_server_list    => $config_db_server_list_9042,
       }
     }
   }
