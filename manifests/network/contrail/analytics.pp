@@ -418,6 +418,13 @@ class tripleo::network::contrail::analytics(
         keystone_config          => {
           'KEYSTONE'     => $keystone_config,
         },
+        rabbitmq_server_list         => $rabbit_server_list_no_port,
+        rabbitmq_port                => '5672',
+        rabbitmq_vhost               => $rabbit_vhost,
+        rabbitmq_user                => $rabbit_user,
+        rabbitmq_password            => $rabbit_password,
+        config_db_cql_server_list    => $config_db_server_list_9042,
+        config_db_server_list        => $config_db_server_list_9160,
       }
     } else {
       class {'::contrail::analytics':
