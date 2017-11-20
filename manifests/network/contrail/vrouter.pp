@@ -203,7 +203,7 @@ class tripleo::network::contrail::vrouter (
   $ca_file                      = hiera('contrail::service_certificate', undef),
   $cert_file                    = hiera('contrail::service_certificate', undef),
   $contrail_version             = hiera('contrail::contrail_version',4),
-  $control_server               = hiera('contrail_config_node_ips',hiera('contrail::vrouter::control_node_ips')),
+  $control_server               = hiera('contrail_control_node_ips',hiera('contrail::vrouter::control_node_ips')),
   $disc_server_ip               = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port             = hiera('contrail::disc_server_port'),
   $gateway                      = hiera('contrail::vrouter::gateway'),
