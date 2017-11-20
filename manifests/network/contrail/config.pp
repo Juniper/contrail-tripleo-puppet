@@ -117,6 +117,11 @@
 #  String value.
 #  Defaults to hiera('contrail::disc_server_port')
 #
+# [*global_asn*]
+#  (optional) global ASN
+#  String value.
+#  Defaults to hiera('contrail::config::asn')
+#
 # [*host_ip*]
 #  (optional) IPv4 address of Config server
 #  String (IPv4) value.
@@ -244,6 +249,7 @@ class tripleo::network::contrail::config(
   $contrail_version             = hiera('contrail::contrail_version',4),
   $disc_server_ip               = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port             = hiera('contrail::disc_server_port'),
+  $global_asn                   = hiera('contrail::config::global_asn','64512'),
   $host_ip                      = hiera('contrail::config::host_ip'),
   $ifmap_password               = hiera('contrail::config::ifmap_password',false),
   $ifmap_server_ip              = hiera('contrail::config::host_ip'),
@@ -510,6 +516,7 @@ class tripleo::network::contrail::config(
       api_port                   => $api_port,
       config_node_address        => $host_ip,
       config_node_name           => $::hostname,
+      global_asn                 => $global_asn,
       keystone_admin_user        => $admin_user,
       keystone_admin_password    => $admin_password,
       keystone_admin_tenant_name => $admin_tenant_name,
