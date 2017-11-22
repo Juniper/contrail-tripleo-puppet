@@ -190,6 +190,8 @@ class tripleo::network::contrail::vrouter (
   $physical_interface           = hiera('contrail::vrouter::physical_interface'),
   $internal_vip                 = hiera('internal_api_virtual_ip'),
   $is_tsn                       = hiera('contrail::vrouter::is_tsn',false),
+  $tsn_evpn_mode                = hiera('contrail::vrouter::tsn_evpn_mode', false),
+  $tsn_server_list              = hiera('contrail_tsn_node_ips', []),
   $is_dpdk                      = hiera('contrail::vrouter::is_dpdk',false),
   $dpdk_driver                  = hiera('contrail::vrouter::dpdk_driver',false),
   $ssl_enabled                  = hiera('contrail_ssl_enabled', false)
@@ -364,9 +366,24 @@ class tripleo::network::contrail::vrouter (
     $macaddress = generate('/bin/cat','/etc/contrail/dpdk_mac')
   }
   if $is_tsn {
+    if $tsn_evpn_mode {
+      $agent_mode = 'tsn-no-forwarding'
+      if size($tsn_server_list) <= 2 {
+        $tsn_servers = $tsn_server_list
+      } else {
+        $tsn_servers = hiera('contrail::vrouter::tsn_servers', [])
+      }
+      if empty($tsn_servers) {
+        fail("TSN server list is empty")
+      }
+    } else {
+      $agent_mode = 'tsn'
+      $tsn_servers = []
+    }
     $vrouter_agent_config_mode_specific = {
       'DEFAULT'  => {
-        'agent_mode' => 'tsn',
+        'agent_mode'  => $agent_mode,
+        'tsn_servers' => join($tsn_servers, ' ')
       },
     }
   } elsif $is_dpdk {
