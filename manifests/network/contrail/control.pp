@@ -121,6 +121,11 @@
 #  String value
 #  Defaults to hiera('contrail::control::asn')
 #
+# [*md5*]
+#  (optional) Md5 config for the node
+#  String value
+#  Defaults to hiera('contrail::control::md5')
+#
 # [*secret*]
 #  (optional) RNDC secret for named
 #  String value
@@ -160,6 +165,7 @@ class tripleo::network::contrail::control(
   $rabbit_password       = hiera('contrail::rabbit_password'),
   $rabbit_port           = hiera('contrail::rabbit_port'),
   $router_asn            = hiera('contrail::control::asn'),
+  $md5                   = hiera('contrail::control::md5', undef),
   $secret                = hiera('contrail::control::rndc_secret'),
   $manage_named          = hiera('contrail::control::manage_named'),
   $vxlan_vn_id_mode      = hiera('contrail::control::vxlan_vn_id_mode', undef),
@@ -266,6 +272,7 @@ class tripleo::network::contrail::control(
       keystone_admin_password    => $admin_password,
       keystone_admin_tenant_name => $admin_tenant_name,
       router_asn                 => $router_asn,
+      md5                        => $md5,
     } ->
     class {'::contrail::control::provision_encap':
       api_address                => $api_server,
