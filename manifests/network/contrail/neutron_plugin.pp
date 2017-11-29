@@ -220,12 +220,12 @@ class tripleo::network::contrail::neutron_plugin (
 
   if $auth_version == 2 {
     $auth_url_suffix = '/v2.0'
-    $api_srv_auth_url_suffix = "/v2.0/tokens"
-    $vnc_authn_url = "/v2.0/tokens"
+    $api_srv_auth_url_suffix = '/v2.0/tokens'
+    $vnc_authn_url = '/v2.0/tokens'
   } else {
     $auth_url_suffix = '/v3'
-    $api_srv_auth_url_suffix = "/v3/auth/tokens"
-    $vnc_authn_url = "/v3/auth/tokens"
+    $api_srv_auth_url_suffix = '/v3/auth/tokens'
+    $vnc_authn_url = '/v3/auth/tokens'
   }
   $vnc_api_lib_config_common = {
     'auth' => {
