@@ -165,7 +165,7 @@ class tripleo::network::contrail::control(
   $rabbit_password       = hiera('contrail::rabbit_password'),
   $rabbit_port           = hiera('contrail::rabbit_port'),
   $router_asn            = hiera('contrail::control::asn'),
-  $md5                   = hiera('contrail_control_md5', undef),
+  $md5                   = hiera('contrail::control::md5', undef),
   $secret                = hiera('contrail::control::rndc_secret'),
   $manage_named          = hiera('contrail::control::manage_named'),
   $vxlan_vn_id_mode      = hiera('contrail::control::vxlan_vn_id_mode', undef),
