@@ -269,8 +269,8 @@ class tripleo::network::contrail::analytics(
     $auth_url_suffix = 'v3'
     $vnc_authn_url = '/v3/auth/tokens'
   }
-  $auth_url = "${auth_protocol}://${auth_host}:${auth_port}/${auth_url_suffix}"
   if $auth_protocol == 'https' {
+    $auth_url = "${auth_protocol}://${auth_host}:${auth_port_ssl}/${auth_url_suffix}"
     $keystone_config_proto = {
         'admin_password'    => $admin_password,
         'admin_tenant_name' => $admin_tenant_name,
