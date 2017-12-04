@@ -283,7 +283,7 @@ class tripleo::network::contrail::config(
   if $auth_version == 2 {
     $keystone_config_ver = {}
     $auth_url_suffix = 'v2.0'
-    $vnc_authn_url = "/v2.0/tokens"
+    $vnc_authn_url = '/v2.0/tokens'
   } else {
     $keystone_config_ver = {
       'KEYSTONE' => {
@@ -293,7 +293,7 @@ class tripleo::network::contrail::config(
       },
     }
     $auth_url_suffix = 'v3'
-    $vnc_authn_url = "/v3/auth/tokens"
+    $vnc_authn_url = '/v3/auth/tokens'
   }
   if $auth_protocol == 'https' {
     $auth_url = "${auth_protocol}://${auth_host}:${auth_port_ssl}/${auth_url_suffix}"
@@ -373,8 +373,8 @@ class tripleo::network::contrail::config(
         basicauthusers_property => $basicauthusers_property,
         config_nodemgr_config   => {
           'DISCOVERY' => {
-            'server'                => $disc_server_ip,
-            'port'                  => $disc_server_port,
+            'server' => $disc_server_ip,
+            'port'   => $disc_server_port,
           },
         },
         device_manager_config   => {
@@ -436,8 +436,8 @@ class tripleo::network::contrail::config(
       }
     } else {
       class {'::contrail::config':
-        contrail_version        => $contrail_version,
-        api_config              => {
+        contrail_version      => $contrail_version,
+        api_config            => {
           'DEFAULTS' => {
             'aaa_mode'              => $aaa_mode,
             'auth'                  => $auth,
@@ -452,12 +452,12 @@ class tripleo::network::contrail::config(
             'zk_server_ip'          => $zk_server_ip_2181,
           },
         },
-        config_nodemgr_config   => {
+        config_nodemgr_config => {
           'COLLECTOR' => {
             'server_list'           => $collector_server_list_8086,
           },
         },
-        device_manager_config   => {
+        device_manager_config => {
           'DEFAULTS' => {
             'api_server_ip'         => $api_server,
             'api_server_port'       => $api_port,
@@ -470,8 +470,8 @@ class tripleo::network::contrail::config(
             'zk_server_ip'          => $zk_server_ip_2181,
           },
         },
-        keystone_config         => $keystone_config,
-        schema_config           => {
+        keystone_config       => $keystone_config,
+        schema_config         => {
           'DEFAULTS' => {
             'api_server_ip'         => $api_server,
             'api_server_port'       => $api_port,
@@ -484,8 +484,8 @@ class tripleo::network::contrail::config(
             'zk_server_ip'          => $zk_server_ip_2181,
           },
         },
-        svc_monitor_config      => {
-          'DEFAULTS' => {
+        svc_monitor_config    => {
+          'DEFAULTS'  => {
             'api_server_ip'         => $api_server,
             'api_server_port'       => $api_port,
             'cassandra_server_list' => $cassandra_server_list_9160,
@@ -500,7 +500,7 @@ class tripleo::network::contrail::config(
             'analytics_server_list' => $analytics_server_list_8081,
           },
         },
-        vnc_api_lib_config      => $vnc_api_lib_config,
+        vnc_api_lib_config    => $vnc_api_lib_config,
       }
     }
   }

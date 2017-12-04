@@ -214,8 +214,8 @@ class tripleo::network::contrail::control(
         },
         control_nodemgr_config => {
           'DISCOVERY' => {
-            'server'   => $disc_server_ip,
-            'port'     => $disc_server_port,
+            'server' => $disc_server_ip,
+            'port'   => $disc_server_port,
           },
         }
       }
@@ -225,31 +225,31 @@ class tripleo::network::contrail::control(
         secret                 => $secret,
         manage_named           => $manage_named,
         control_config         => {
-          'DEFAULT'   => {
+          'DEFAULT'  => {
             'hostip'     => $host_ip,
             'collectors' => $collector_server_list_8086,
           },
-          'CONFIGDB'   => {
-            'rabbitmq_server_list' => $rabbit_server_list_5672,
-            'rabbitmq_user' => $rabbit_user,
-            'rabbitmq_password' => $rabbit_password,
-            'rabbitmq_vhost' => '/',
-            'rabbitmq_use_ssl' => 'False',
+          'CONFIGDB' => {
+            'rabbitmq_server_list'  => $rabbit_server_list_5672,
+            'rabbitmq_user'         => $rabbit_user,
+            'rabbitmq_password'     => $rabbit_password,
+            'rabbitmq_vhost'        => '/',
+            'rabbitmq_use_ssl'      => 'False',
             'config_db_server_list' => $config_db_server_list_9042,
           },
         },
         dns_config             => {
-          'DEFAULT'   => {
+          'DEFAULT'  => {
             'hostip'      => $host_ip,
             'rndc_secret' => $secret,
-            'collectors' => $collector_server_list_8086,
+            'collectors'  => $collector_server_list_8086,
           },
-          'CONFIGDB'   => {
-            'rabbitmq_server_list' => $rabbit_server_list_5672,
-            'rabbitmq_user' => $rabbit_user,
-            'rabbitmq_password' => $rabbit_password,
-            'rabbitmq_vhost' => '/',
-            'rabbitmq_use_ssl' => 'False',
+          'CONFIGDB' => {
+            'rabbitmq_server_list'  => $rabbit_server_list_5672,
+            'rabbitmq_user'         => $rabbit_user,
+            'rabbitmq_password'     => $rabbit_password,
+            'rabbitmq_vhost'        => '/',
+            'rabbitmq_use_ssl'      => 'False',
             'config_db_server_list' => $config_db_server_list_9042,
           },
         },

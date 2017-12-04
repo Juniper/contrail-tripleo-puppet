@@ -216,7 +216,7 @@ class tripleo::network::contrail::vrouter (
   if $auth_version == 2 {
     $keystone_config_ver = {}
     $auth_url_suffix = 'v2.0'
-    $vnc_authn_url = "/v2.0/tokens"
+    $vnc_authn_url = '/v2.0/tokens'
   } else {
     $keystone_config_ver = {
       'KEYSTONE' => {
@@ -226,7 +226,7 @@ class tripleo::network::contrail::vrouter (
       },
     }
     $auth_url_suffix = 'v3'
-    $vnc_authn_url = "/v3/auth/tokens"
+    $vnc_authn_url = '/v3/auth/tokens'
   }
   $keystone_config_common = {
     'KEYSTONE' => {
@@ -334,8 +334,8 @@ class tripleo::network::contrail::vrouter (
     if $auth_host and $auth_host != '' {
       $vnc_api_lib_config_type = {
         'auth' => {
-          'AUTHN_TYPE'      => 'keystone',
-          'insecure'        => $insecure,
+          'AUTHN_TYPE'          => 'keystone',
+          'insecure'            => $insecure,
         },
       }
     } else {
@@ -380,7 +380,7 @@ class tripleo::network::contrail::vrouter (
         $tsn_servers = hiera('contrail::vrouter::tsn_servers', [])
       }
       if empty($tsn_servers) {
-        fail("TSN server list is empty")
+        fail('TSN server list is empty')
       }
     } else {
       $agent_mode = 'tsn'
