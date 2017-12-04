@@ -736,7 +736,7 @@ class tripleo::haproxy (
   $ports = merge($default_service_ports, $service_ports)
 
   if $enable_internal_tls {
-    $internal_tls_member_options = ['ssl', 'verify required', "ca-file ${ca_bundle}"]
+    $internal_tls_member_options = ['ssl', 'verify required', "ca-file ${::ca_bundle}"]
   } else {
     $internal_tls_member_options = []
   }
@@ -995,6 +995,7 @@ class tripleo::haproxy (
       public_ssl_port   => $ports[contrail_discovery_ssl_port],
     }
   }
+
   if $contrail_analytics {
     ::tripleo::haproxy::endpoint { 'contrail_analytics':
       public_virtual_ip => $public_virtual_ip,

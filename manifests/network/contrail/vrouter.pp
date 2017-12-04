@@ -347,8 +347,8 @@ class tripleo::network::contrail::vrouter (
     if $auth_host and $auth_host != '' {
       $vnc_api_lib_config_type = {
         'auth' => {
-          'AUTHN_TYPE'      => 'keystone',
-          'insecure'        => $insecure,
+          'AUTHN_TYPE'          => 'keystone',
+          'insecure'            => $insecure,
         },
       }
     } else {
@@ -393,7 +393,7 @@ class tripleo::network::contrail::vrouter (
         $tsn_servers = hiera('contrail::vrouter::tsn_servers', [])
       }
       if empty($tsn_servers) {
-        fail("TSN server list is empty")
+        fail('TSN server list is empty')
       }
     } else {
       $agent_mode = 'tsn'
