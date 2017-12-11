@@ -515,6 +515,13 @@ class tripleo::network::contrail::config(
       keystone_admin_tenant_name => $admin_tenant_name,
       openstack_vip              => $auth_host,
     }
+    class {'::contrail::config::provision_alarm':
+      api_address                => $api_server,
+      api_port                   => $api_port,
+      keystone_admin_user        => $admin_user,
+      keystone_admin_password    => $admin_password,
+      keystone_admin_tenant_name => $admin_tenant_name,
+    }
     if $config_hostnames[0] == $::hostname {
       class {'::contrail::config::provision_linklocal':
         api_address                => $api_server,
