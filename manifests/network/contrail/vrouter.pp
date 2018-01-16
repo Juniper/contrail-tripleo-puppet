@@ -196,8 +196,19 @@ class tripleo::network::contrail::vrouter (
   $dpdk_driver                  = hiera('contrail::vrouter::dpdk_driver',false),
   $ssl_enabled                  = hiera('contrail_ssl_enabled', false)
 ) {
+
   $cidr = netmask_to_cidr($netmask)
-  $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
+  if size(hiera('contrail::vrouter::analytics_node_ips')) == 0 {
+   if size($analytics_server_list) == 0 { 
+    $collector_server_list_8086 = ''
+   }
+   else { 
+    $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
+   }
+  } else {
+    $collector_server_list_8086 = join([join(hiera('contrail::vrouter::analytics_node_ips'), ':8086 '),':8086'],'') 
+  }
+
   if size(hiera('contrail::vrouter::control_node_ips')) == 0 {
     if size($control_server) == 0 {
       $control_server_list = ''
