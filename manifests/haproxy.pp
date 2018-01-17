@@ -512,7 +512,6 @@
 #    'ironic_inspector_port' (Defaults to 5050)
 #    'ironic_inspector_ssl_port' (Defaults to 13050)
 #    'keystone_admin_api_port' (Defaults to 35357)
-#    'keystone_admin_api_ssl_port' (Defaults to 13357)
 #    'keystone_public_api_port' (Defaults to 5000)
 #    'keystone_public_api_ssl_port' (Defaults to 13000)
 #    'manila_api_port' (Defaults to 8786)
@@ -693,7 +692,6 @@ class tripleo::haproxy (
     ironic_inspector_port => 5050,
     ironic_inspector_ssl_port => 13050,
     keystone_admin_api_port => 35357,
-    keystone_admin_api_ssl_port => 13357,
     keystone_public_api_port => 5000,
     keystone_public_api_ssl_port => 13000,
     manila_api_port => 8786,
@@ -871,20 +869,18 @@ class tripleo::haproxy (
 
   if $keystone_admin {
     ::tripleo::haproxy::endpoint { 'keystone_admin':
-      public_virtual_ip => $public_virtual_ip,
-      internal_ip       => hiera('keystone_admin_api_vip', $controller_virtual_ip),
-      service_port      => $ports[keystone_admin_api_port],
-      ip_addresses      => hiera('keystone_admin_api_node_ips', $controller_hosts_real),
-      server_names      => hiera('keystone_admin_api_node_names', $controller_hosts_names_real),
-      mode              => 'http',
-      listen_options    => {
+      internal_ip     => hiera('keystone_admin_api_vip', $controller_virtual_ip),
+      service_port    => $ports[keystone_admin_api_port],
+      ip_addresses    => hiera('keystone_admin_api_node_ips', $controller_hosts_real),
+      server_names    => hiera('keystone_admin_api_node_names', $controller_hosts_names_real),
+      mode            => 'http',
+      listen_options  => {
           'http-request' => [
             'set-header X-Forwarded-Proto https if { ssl_fc }',
             'set-header X-Forwarded-Proto http if !{ ssl_fc }'],
       },
-      public_ssl_port   => $ports[keystone_admin_api_ssl_port],
-      service_network   => $keystone_admin_network,
-      member_options    => union($haproxy_member_options, $internal_tls_member_options),
+      service_network => $keystone_admin_network,
+      member_options  => union($haproxy_member_options, $internal_tls_member_options),
     }
   }
 
@@ -975,6 +971,12 @@ class tripleo::haproxy (
   }
 
   if $contrail_config {
+    $contrail_config_mode = 'http'
+    $contrail_config_listen_options = {
+      'option'  => ['nolinger', 'forwardfor'],
+      'balance' => 'roundrobin',
+      'cookie'  => 'SERVERID insert indirect nocache',
+    }
     ::tripleo::haproxy::endpoint { 'contrail_config':
       public_virtual_ip => $public_virtual_ip,
       internal_ip       => hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
@@ -982,17 +984,24 @@ class tripleo::haproxy (
       ip_addresses      => hiera('contrail_config_node_ips', $::contrail_config_node_ips),
       server_names      => hiera('contrail_config_node_ips', $::contrail_config_node_ips),
       public_ssl_port   => $ports[contrail_config_ssl_port],
+      mode              => $contrail_config_mode,
+      listen_options    => $contrail_config_listen_options,
     }
   }
 
   if $contrail_config {
+    # Use internal_certificate  => undef
+    # Because Discovery client cant use SSL.
+    # This service is depricated and is removed from Contrail 4.x.
     ::tripleo::haproxy::endpoint { 'contrail_discovery':
-      public_virtual_ip => $public_virtual_ip,
-      internal_ip       => hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
-      service_port      => $ports[contrail_discovery_port],
-      ip_addresses      => hiera('contrail_config_node_ips', $::contrail_config_node_ips),
-      server_names      => hiera('contrail_config_node_ips', $::contrail_config_node_ips),
-      public_ssl_port   => $ports[contrail_discovery_ssl_port],
+      public_virtual_ip           => $public_virtual_ip,
+      internal_ip                 => hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
+      service_port                => $ports[contrail_discovery_port],
+      ip_addresses                => hiera('contrail_config_node_ips', $::contrail_config_node_ips),
+      server_names                => hiera('contrail_config_node_ips', $::contrail_config_node_ips),
+      public_ssl_port             => $ports[contrail_discovery_ssl_port],
+      use_internal_certificates   => false,
+      internal_certificates_specs => {},
     }
   }
 
