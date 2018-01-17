@@ -59,22 +59,27 @@
 #  Integer value.
 #  Defaults to hiera('step')
 #
-# [*use_ssl*]
+# [*contrail_ssl_enabled*]
 #  (optional) switch for ssl usage
 #  String value.
 #  Defaults to 'False'
 #
 class tripleo::network::contrail::heat(
-  $step = hiera('step'),
+  $step                   = hiera('step'),
   $admin_password         = hiera('contrail::admin_password'),
   $admin_token            = hiera('contrail::admin_token'),
   $admin_user             = hiera('contrail::admin_user'),
   $api_server             = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $api_port               = 8082,
   $auth_host              = hiera('contrail::auth_host'),
-  $use_ssl                = 'False',
-)
-{
+  $ssl_enabled            = hiera('contrail_ssl_enabled', false),
+
+) {
+  if $ssl_enabled {
+    $use_ssl = 'False'
+  } else {
+    $use_ssl = 'True'
+  }
 
   class {'::contrail::heat':
     heat_config            => {

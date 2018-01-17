@@ -44,30 +44,10 @@
 #  String (IPv4) value.
 #  Defaults to hiera('contrail::auth_host')
 #
-# [*auth_port_public*]
+# [*auth_port_internal*]
 #  (optional) keystone port.
 #  Integer value.
-#  Defaults to hiera('contrail::auth_port_public')
-#
-# [*auth_port_ssl*]
-#  (optional) keystone ssl port.
-#  Integer value.
-#  Defaults to hiera('contrail::auth_port_ssl')
-#
-# [*auth_port_ssl_public*]
-#  (optional) keystone public ssl port.
-#  Integer value.
-#  Defaults to hiera('contrail::auth_port_ssl_public')
-#
-# [*auth_protocol*]
-#  (optional) authentication protocol.
-#  String value.
-#  Defaults to hiera('contrail::auth_protocol')
-#
-# [*cert_file*]
-#  (optional) cert file name
-#  String value.
-#  Defaults to hiera('contrail::service_certificate',false)
+#  Defaults to hiera('contrail::auth_port_internal')
 #
 # [*cassandra_server_list*]
 #  (optional) List IPs+port of Cassandra servers
@@ -104,47 +84,69 @@
 #  String (IPv4) value.
 #  Defaults to '127.0.0.1'
 #
+# [*ssl_enabled*]
+#  (optional) SSL should be used in internal Contrail services communications
+#  Boolean value.
+#  Defaults to hiera('contrail_ssl_enabled', false)
+#
+# [*ca_file*]
+#  (optional) ca file name
+#  String value.
+#  Defaults to hiera('contrail::service_cert_file',false)
+#
+# [*cert_file*]
+#  (optional) cert file name
+#  String value.
+#  Defaults to hiera('contrail::service_cert_file',false)
+#
+# [*key_file*]
+#  (optional) key file name
+#  String value.
+#  Defaults to hiera('contrail::service_key_file',false)
+#
 class tripleo::network::contrail::webui(
+  $step                      = hiera('step'),
   $admin_password            = hiera('contrail::admin_password'),
   $admin_tenant_name         = hiera('contrail::admin_tenant_name'),
   $admin_token               = hiera('contrail::admin_token'),
   $admin_user                = hiera('contrail::admin_user'),
-  $auth_host                 = hiera('internal_api_virtual_ip'),
-  $auth_protocol             = hiera('contrail::auth_protocol'),
-  $auth_port_public          = hiera('contrail::auth_port_public'),
-  $auth_port_ssl_public      = hiera('contrail::auth_port_ssl_public'),
+  $auth_host                 = hiera('contrail::auth_host_internal', hiera('internal_api_virtual_ip')),
+  $auth_port                 = hiera('contrail::auth_port_internal'),
+  $auth_protocol             = hiera('contrail::auth_protocol_internal'),
   $auth_version              = hiera('contrail::auth_version',2),
   $cassandra_server_list     = hiera('contrail_database_node_ips'),
-  $cert_file                 = hiera('contrail::service_certificate',false),
-  $contrail_analytics_vip    = hiera('contrail_analytics_vip',hiera('internal_api_virtual_ip')),
-  $contrail_config_vip       = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $contrail_analytics_vip    = hiera('contrail_analytics_vip', hiera('internal_api_virtual_ip')),
+  $contrail_config_vip       = hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
   $contrail_webui_http_port  = hiera('contrail::webui::http_port'),
   $contrail_webui_https_port = hiera('contrail::webui::https_port'),
   $neutron_vip               = hiera('internal_api_virtual_ip'),
   $redis_ip                  = hiera('contrail::webui::redis_ip'),
+  $ssl_enabled               = hiera('contrail_ssl_enabled', false),
+  $ca_file                   = hiera('contrail::ca_cert_file', undef),
+  $key_file                  = hiera('contrail::service_key_file', undef),
+  $cert_file                 = hiera('contrail::service_cert_file', undef),
 )
 {
-  if $auth_protocol == 'https' {
-    $auth_port = $auth_port_ssl_public
-  } else {
-    $auth_port = $auth_port_public
-  }
-  class {'::contrail::webui':
-    admin_user                => $admin_user,
-    admin_password            => $admin_password,
-    admin_token               => $admin_token,
-    admin_tenant_name         => $admin_tenant_name,
-    auth_port                 => $auth_port,
-    auth_protocol             => $auth_protocol,
-    auth_version              => $auth_version,
-    cassandra_ip              => $cassandra_server_list,
-    cert_file                 => $cert_file,
-    contrail_config_vip       => $contrail_config_vip,
-    contrail_analytics_vip    => $contrail_analytics_vip,
-    contrail_webui_http_port  => $contrail_webui_http_port,
-    contrail_webui_https_port => $contrail_webui_https_port,
-    neutron_vip               => $neutron_vip,
-    openstack_vip             => $auth_host,
-    redis_ip                  => $redis_ip,
+  if $step >= 5 {
+    # todo: it is actually is used as CA file for identity manager
+    $cert_file_todo = undef
+    class {'::contrail::webui':
+      admin_user                => $admin_user,
+      admin_password            => $admin_password,
+      admin_token               => $admin_token,
+      admin_tenant_name         => $admin_tenant_name,
+      auth_port                 => $auth_port,
+      auth_protocol             => $auth_protocol,
+      auth_version              => $auth_version,
+      cassandra_ip              => $cassandra_server_list,
+      cert_file                 => $cert_file_todo,
+      contrail_config_vip       => $contrail_config_vip,
+      contrail_analytics_vip    => $contrail_analytics_vip,
+      contrail_webui_http_port  => $contrail_webui_http_port,
+      contrail_webui_https_port => $contrail_webui_https_port,
+      neutron_vip               => $neutron_vip,
+      openstack_vip             => $auth_host,
+      redis_ip                  => $redis_ip,
+    }
   }
 }
