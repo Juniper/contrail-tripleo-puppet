@@ -29,11 +29,6 @@
 #  String (IPv4) value
 #  Defaults to hiera('contrail::auth_host')
 #
-# [*auth_protocol*]
-#  (optional) authentication protocol.
-#  String value.
-#  Defaults to hiera('contrail::auth_protocol')
-#
 # [*api_server*]
 #  (optional) IPv4 VIP of Contrail Config API
 #  String (IPv4) value
@@ -79,15 +74,25 @@
 #  Integer value.
 #  Defaults to hiera('contrail::contrail_version',4)
 #
+# [*ssl_enabled*]
+#  (optional) SSL should be used in internal Contrail services communications
+#  Boolean value.
+#  Defaults to hiera('contrail_ssl_enabled', false)
+#
 # [*ca_file*]
 #  (optional) ca file name
 #  String value.
-#  Defaults to hiera('contrail::service_certificate',false)
+#  Defaults to hiera('contrail::ca_cert_file',false)
+#
+# [*key_file*]
+#  (optional) key file name
+#  String value.
+#  Defaults to hiera('contrail::service_key_file',false)
 #
 # [*cert_file*]
 #  (optional) cert file name
 #  String value.
-#  Defaults to hiera('contrail::service_certificate',false)
+#  Defaults to hiera('contrail::service_cert_file',false)
 #
 # [*cassandra_servers*]
 #  (optional) List of analytics cassandra servers
@@ -146,10 +151,19 @@ class tripleo::network::contrail::analyticsdatabase(
   $admin_user               = hiera('contrail::admin_user'),
   $auth_port                = hiera('contrail::auth_port'),
   $auth_protocol            = hiera('contrail::auth_protocol'),
+  $auth_ca_file             = hiera('contrail::auth_ca_file', undef),
+  $auth_ca_cert             = hiera('contrail::auth_ca_cert', undef),
   $cassandra_servers        = hiera('contrail_analytics_database_node_ips'),
-  $ca_file                  = hiera('contrail::service_certificate',false),
-  $cert_file                = hiera('contrail::service_certificate',false),
+  $ssl_enabled              = hiera('contrail_ssl_enabled', false),
+  $insecure                 = hiera('contrail::insecure'),
   $analyticsdb_min_disk_gb  = hiera('contrail_analyticsdb_min_disk_gb',undef),
+  $internal_api_ssl         = hiera('contrail_internal_api_ssl', false),
+  $ca_file                  = hiera('contrail::ca_cert_file', undef),
+  $ca_cert                  = hiera('contrail::ca_cert', undef),
+  $ca_key_file              = hiera('contrail::ca_key_file', undef),
+  $ca_key                   = hiera('contrail::ca_key', undef),
+  $key_file                 = hiera('contrail::service_key_file', undef),
+  $cert_file                = hiera('contrail::service_cert_file', undef),
   $contrail_version         = hiera('contrail::contrail_version',4),
   $disc_server_ip           = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port         = hiera('contrail::disc_server_port'),
@@ -161,21 +175,56 @@ class tripleo::network::contrail::analyticsdatabase(
 )
 {
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
-  if $auth_protocol == 'https' {
-    $vnc_api_lib_config = {
-      'auth' => {
+  if $internal_api_ssl {
+    if $auth_ca_file {
+      $cafile_vnc_api = {
+        'global' => {
+          'cafile' => $auth_ca_file,
+        },
+        'auth'   => {
+          'cafile' => $auth_ca_file,
+        },
+      }
+    } else {
+      $cafile_vnc_api = {}
+    }
+    $vnc_api_lib_preconfig = {
+      'global' => {
+        'insecure' => $insecure,
+        'certfile' => $cert_file,
+        'keyfile'  => $key_file,
+      },
+      'auth'   => {
         'AUTHN_SERVER'   => $auth_host,
         'AUTHN_PORT'     => $auth_port,
         'AUTHN_PROTOCOL' => $auth_protocol,
+        'insecure'       => $insecure,
         'certfile'       => $cert_file,
-        'cafile'         => $ca_file,
+        'keyfile'        => $key_file,
       },
     }
+    $vnc_api_lib_config = deep_merge($vnc_api_lib_preconfig, $cafile_vnc_api)
   } else {
     $vnc_api_lib_config = {
       'auth' => {
-        'AUTHN_SERVER' => $auth_host,
+        'AUTHN_SERVER'    => $auth_host,
+        'AUTHN_PORT'      => $auth_port,
+        'AUTHN_PROTOCOL'  => $auth_protocol,
       },
+    }
+  }
+  if $step == 1 {
+    class { '::tripleo::network::contrail::certmonger':
+      host_ip      => $host_ip,
+      ssl_enabled  => $ssl_enabled or $internal_api_ssl,
+      key_file     => $key_file,
+      cert_file    => $cert_file,
+      ca_file      => $ca_file,
+      ca_cert      => $ca_cert,
+      ca_key_file  => $ca_key_file,
+      ca_key       => $ca_key,
+      auth_ca_cert => $auth_ca_cert,
+      auth_ca_file => $auth_ca_file,
     }
   }
   if $step == 2 {
@@ -208,7 +257,19 @@ class tripleo::network::contrail::analyticsdatabase(
         },
       }
     }
-    $nodemgr_config = deep_merge($nodemgr_default, $nodemgr_ver_specific)
+    $nodemgr_sandesh = {
+      'SANDESH' => {
+        'introspect_ssl_enable' => $ssl_enabled,
+        'sandesh_ssl_enable'    => $ssl_enabled,
+        'sandesh_keyfile'       => $key_file,
+        'sandesh_certfile'      => $cert_file,
+        'sandesh_ca_cert'       => $ca_file,
+      },
+    }
+    $nodemgr_config = deep_merge(
+      deep_merge($nodemgr_default, $nodemgr_ver_specific),
+      $nodemgr_sandesh
+    )
     class {'::contrail::analyticsdatabase':
       analyticsdatabase_params => {
         'auth_host'             => $auth_host,
@@ -231,6 +292,7 @@ class tripleo::network::contrail::analyticsdatabase(
     class {'::contrail::database::provision_database':
       api_address                => $api_server,
       api_port                   => $api_port,
+      api_server_use_ssl         => $internal_api_ssl,
       database_node_address      => $host_ip,
       database_node_name         => $host_name,
       keystone_admin_user        => $admin_user,
