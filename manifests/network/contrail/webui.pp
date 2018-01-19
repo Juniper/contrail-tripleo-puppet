@@ -118,22 +118,24 @@ class tripleo::network::contrail::webui(
   $redis_ip                  = hiera('contrail::webui::redis_ip'),
 )
 {
-  class {'::contrail::webui':
-    admin_user                => $admin_user,
-    admin_password            => $admin_password,
-    admin_token               => $admin_token,
-    admin_tenant_name         => $admin_tenant_name,
-    auth_port                 => $auth_port_public,
-    auth_protocol             => $auth_protocol,
-    auth_version              => $auth_version,
-    cassandra_ip              => $cassandra_server_list,
-    cert_file                 => $cert_file,
-    contrail_config_vip       => $contrail_config_vip,
-    contrail_analytics_vip    => $contrail_analytics_vip,
-    contrail_webui_http_port  => $contrail_webui_http_port,
-    contrail_webui_https_port => $contrail_webui_https_port,
-    neutron_vip               => $neutron_vip,
-    openstack_vip             => $auth_host,
-    redis_ip                  => $redis_ip,
+  if $step >= 5 {
+    class {'::contrail::webui':
+      admin_user                => $admin_user,
+      admin_password            => $admin_password,
+      admin_token               => $admin_token,
+      admin_tenant_name         => $admin_tenant_name,
+      auth_port                 => $auth_port_public,
+      auth_protocol             => $auth_protocol,
+      auth_version              => $auth_version,
+      cassandra_ip              => $cassandra_server_list,
+      cert_file                 => $cert_file,
+      contrail_config_vip       => $contrail_config_vip,
+      contrail_analytics_vip    => $contrail_analytics_vip,
+      contrail_webui_http_port  => $contrail_webui_http_port,
+      contrail_webui_https_port => $contrail_webui_https_port,
+      neutron_vip               => $neutron_vip,
+      openstack_vip             => $auth_host,
+      redis_ip                  => $redis_ip,
+    }
   }
 }
