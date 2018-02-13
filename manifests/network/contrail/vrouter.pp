@@ -194,7 +194,8 @@ class tripleo::network::contrail::vrouter (
   $tsn_server_list              = hiera('contrail_tsn_node_ips', []),
   $is_dpdk                      = hiera('contrail::vrouter::is_dpdk',false),
   $dpdk_driver                  = hiera('contrail::vrouter::dpdk_driver',false),
-  $ssl_enabled                  = hiera('contrail_ssl_enabled', false)
+  $ssl_enabled                  = hiera('contrail_ssl_enabled', false),
+  $sriov_on                     = hiera('contrail::vrouter::sriov_on', false),
 ) {
   $cidr = netmask_to_cidr($netmask)
   $vrouter_analytics_server_list = hiera('contrail::vrouter::analytics_node_ips', [])
@@ -428,6 +429,9 @@ class tripleo::network::contrail::vrouter (
   )
 
   if $step >= 4 {
+    if $sriov_on {
+      include ::tripleo::host::sriov
+    }
     class {'::contrail::vrouter':
         contrail_version       => $contrail_version,
         discovery_ip           => $disc_server_ip,
