@@ -131,6 +131,26 @@
 #  String value
 #  Defaults to hiera('contrail::control::rndc_secret')
 #
+# [*ssl_enabled*]
+#  (optional) SSL should be used in internal Contrail services communications
+#  Boolean value
+#  Defaults to hiera('contrail_ssl_enabled', false)
+#
+# [*ca_file*]
+#  (optional) ca file name
+#  String value.
+#  Defaults to hiera('contrail::ca_cert_file',false)
+#
+# [*key_file*]
+#  (optional) key file name
+#  String value.
+#  Defaults to hiera('contrail::service_key_file',false)
+#
+# [*cert_file*]
+#  (optional) cert file name
+#  String value.
+#  Defaults to hiera('contrail::service_cert_file',false)
+#
 # [*step*]
 #  (optional) Step stack is in
 #  Integer value.
@@ -164,11 +184,18 @@ class tripleo::network::contrail::control(
   $rabbit_user           = hiera('contrail::rabbit_user'),
   $rabbit_password       = hiera('contrail::rabbit_password'),
   $rabbit_port           = hiera('contrail::rabbit_port'),
+  $rabbit_use_ssl        = hiera('contrail::rabbit_use_ssl', false),
+  $rabbit_ca_file        = hiera('contrail::rabbit_ca_file', undef),
   $router_asn            = hiera('contrail::control::asn'),
   $md5                   = hiera('contrail::control::md5', undef),
   $secret                = hiera('contrail::control::rndc_secret'),
   $manage_named          = hiera('contrail::control::manage_named'),
   $vxlan_vn_id_mode      = hiera('contrail::control::vxlan_vn_id_mode', undef),
+  $ssl_enabled           = hiera('contrail_ssl_enabled', false),
+  $internal_api_ssl      = hiera('contrail_internal_api_ssl', false),
+  $ca_file               = hiera('contrail::ca_cert_file', undef),
+  $key_file              = hiera('contrail::service_key_file', undef),
+  $cert_file             = hiera('contrail::service_cert_file', undef),
 )
 {
   $control_ifmap_user     = "${ifmap_username}.control"
@@ -178,7 +205,13 @@ class tripleo::network::contrail::control(
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
   $config_db_server_list_9042 = join([join($config_server_list, ':9042 '),':9042'],'')
   $rabbit_server_list_5672 = join([join($rabbit_server, ':5672 '),':5672'],'')
-
+  $sandesh_config = {
+    'introspect_ssl_enable' => $ssl_enabled,
+    'sandesh_ssl_enable'    => $ssl_enabled,
+    'sandesh_keyfile'       => $key_file,
+    'sandesh_certfile'      => $cert_file,
+    'sandesh_ca_cert'       => $ca_file,
+  }
   if $step >= 3 {
     if $contrail_version == 3 {
       class {'::contrail::control':
@@ -187,7 +220,11 @@ class tripleo::network::contrail::control(
         manage_named           => $manage_named,
         control_config         => {
           'DEFAULT'   => {
-            'hostip' => $host_ip,
+            'hostip'           => $host_ip,
+            'xmpp_auth_enable' => $ssl_enabled,
+            'xmpp_ca_cert'     => $ca_file,
+            'xmpp_server_key'  => $key_file,
+            'xmpp_server_cert' => $cert_file,
           },
           'DISCOVERY' => {
             'port'   => $disc_server_port,
@@ -200,8 +237,12 @@ class tripleo::network::contrail::control(
         },
         dns_config             => {
           'DEFAULT'   => {
-            'hostip'      => $host_ip,
-            'rndc_secret' => $secret,
+            'hostip'               => $host_ip,
+            'rndc_secret'          => $secret,
+            'xmpp_dns_auth_enable' => $ssl_enabled,
+            'xmpp_ca_cert'         => $ca_file,
+            'xmpp_server_key'      => $key_file,
+            'xmpp_server_cert'     => $cert_file,
           },
           'DISCOVERY' => {
             'port'   => $disc_server_port,
@@ -217,46 +258,62 @@ class tripleo::network::contrail::control(
             'server' => $disc_server_ip,
             'port'   => $disc_server_port,
           },
+          'SANDESH'   => $sandesh_config,
         }
       }
     } else {
+      if $rabbit_use_ssl {
+        $rabbit_config = {
+          'rabbitmq_ssl_certfile' => $cert_file,
+          'rabbitmq_ssl_keyfile'  => $key_file,
+          'rabbitmq_ssl_ca_certs' => $rabbit_ca_file,
+        }
+      } else {
+        $rabbit_config = {}
+      }
+      $configdb_common =  {
+        'rabbitmq_server_list'  => $rabbit_server_list_5672,
+        'rabbitmq_user'         => $rabbit_user,
+        'rabbitmq_password'     => $rabbit_password,
+        'rabbitmq_vhost'        => '/',
+        'rabbitmq_use_ssl'      => $rabbit_use_ssl,
+        'config_db_server_list' => $config_db_server_list_9042,
+      }
+      $configdb_config = deep_merge($configdb_common, $rabbit_config)
       class {'::contrail::control':
         contrail_version       => $contrail_version,
         secret                 => $secret,
         manage_named           => $manage_named,
         control_config         => {
           'DEFAULT'  => {
-            'hostip'     => $host_ip,
-            'collectors' => $collector_server_list_8086,
+            'hostip'           => $host_ip,
+            'collectors'       => $collector_server_list_8086,
+            'xmpp_auth_enable' => $ssl_enabled,
+            'xmpp_ca_cert'     => $ca_file,
+            'xmpp_server_key'  => $key_file,
+            'xmpp_server_cert' => $cert_file,
           },
-          'CONFIGDB' => {
-            'rabbitmq_server_list'  => $rabbit_server_list_5672,
-            'rabbitmq_user'         => $rabbit_user,
-            'rabbitmq_password'     => $rabbit_password,
-            'rabbitmq_vhost'        => '/',
-            'rabbitmq_use_ssl'      => 'False',
-            'config_db_server_list' => $config_db_server_list_9042,
-          },
+          'CONFIGDB' => $configdb_config,
+          'SANDESH'  => $sandesh_config,
         },
         dns_config             => {
           'DEFAULT'  => {
-            'hostip'      => $host_ip,
-            'rndc_secret' => $secret,
-            'collectors'  => $collector_server_list_8086,
+            'hostip'               => $host_ip,
+            'rndc_secret'          => $secret,
+            'collectors'           => $collector_server_list_8086,
+            'xmpp_dns_auth_enable' => $ssl_enabled,
+            'xmpp_ca_cert'         => $ca_file,
+            'xmpp_server_key'      => $key_file,
+            'xmpp_server_cert'     => $cert_file,
           },
-          'CONFIGDB' => {
-            'rabbitmq_server_list'  => $rabbit_server_list_5672,
-            'rabbitmq_user'         => $rabbit_user,
-            'rabbitmq_password'     => $rabbit_password,
-            'rabbitmq_vhost'        => '/',
-            'rabbitmq_use_ssl'      => 'False',
-            'config_db_server_list' => $config_db_server_list_9042,
-          },
+          'CONFIGDB' => $configdb_config,
+          'SANDESH'  => $sandesh_config,
         },
         control_nodemgr_config => {
           'COLLECTOR' => {
             'server_list'   => $collector_server_list_8086,
           },
+          'SANDESH'   => $sandesh_config,
         },
       }
     }
@@ -265,6 +322,7 @@ class tripleo::network::contrail::control(
     class {'::contrail::control::provision_control':
       api_address                => $api_server,
       api_port                   => $api_port,
+      api_server_use_ssl         => $internal_api_ssl,
       control_node_address       => $host_ip,
       control_node_name          => $::hostname,
       ibgp_auto_mesh             => $ibgp_auto_mesh,
@@ -277,6 +335,7 @@ class tripleo::network::contrail::control(
     class {'::contrail::control::provision_encap':
       api_address                => $api_server,
       api_port                   => $api_port,
+      api_server_use_ssl         => $internal_api_ssl,
       encap_priority             => $encap_priority,
       vxlan_vn_id_mode           => $vxlan_vn_id_mode,
       keystone_admin_user        => $admin_user,
