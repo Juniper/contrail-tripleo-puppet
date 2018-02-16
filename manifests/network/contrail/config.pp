@@ -651,7 +651,7 @@ class tripleo::network::contrail::config(
         api_address                => $api_server,
         api_port                   => $api_port,
         api_server_use_ssl         => $internal_api_ssl,
-        ipfabric_service_ip        => $api_server,
+        ipfabric_service_ip        => $internal_vip,
         ipfabric_service_port      => $ipfabric_service_port,
         keystone_admin_user        => $admin_user,
         keystone_admin_password    => $admin_password,

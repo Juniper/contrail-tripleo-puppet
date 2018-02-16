@@ -19,6 +19,10 @@
 #
 # == Parameters:
 #
+# [*step*]
+#  The current step of the deployment
+#  Defaults to hiera('step')
+#
 # [*admin_password*]
 #  (optional) admin password
 #  String value.
