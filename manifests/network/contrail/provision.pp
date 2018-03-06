@@ -76,17 +76,21 @@ class tripleo::network::contrail::provision(
   $auth_port         = hiera('contrail::auth_port'),
   $auth_protocol     = hiera('contrail::auth_protocol'),
   $api_server        = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
+  $ssl_enabled       = hiera('contrail_ssl_enabled', false),
+  $internal_api_ssl  = hiera('contrail_internal_api_ssl', false),
 )
 {
   if $step >= 5 {
     class {'::contrail::control::provision_control':
       api_address                => $api_server,
+      api_server_use_ssl         => $internal_api_ssl,
       keystone_admin_user        => $admin_user,
       keystone_admin_password    => $admin_password,
       keystone_admin_tenant_name => $admin_tenant_name,
     }
     class {'::contrail::control::provision_linklocal':
       api_address                => $api_server,
+      api_server_use_ssl         => $internal_api_ssl,
       keystone_admin_user        => $admin_user,
       keystone_admin_password    => $admin_password,
       keystone_admin_tenant_name => $admin_tenant_name,
