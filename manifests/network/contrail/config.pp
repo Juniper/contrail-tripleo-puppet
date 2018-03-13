@@ -73,24 +73,30 @@
 #  (optional) keystone port.
 #  Defaults to hiera('contrail::auth_port')
 #
-# [*auth_protocol*]
-#  (optional) authentication protocol.
-#  Defaults to hiera('contrail::auth_protocol')
-#
 # [*auth_version*]
 #  (optional) authentication protocol version.
 #  Integer value.
 #  Defaults to hiera('contrail::auth_version',2)
 #
+# [*ssl_enabled*]
+#  (optional) SSL should be used in internal Contrail services communications
+#  Boolean value.
+#  Defaults to hiera('contrail_ssl_enabled', false)
+#
 # [*ca_file*]
 #  (optional) ca file name
 #  String value.
-#  Defaults to hiera('contrail::service_certificate',false)
+#  Defaults to hiera('contrail::ca_cert_file',false)
+#
+# [*key_file*]
+#  (optional) key file name
+#  String value.
+#  Defaults to hiera('contrail::service_key_file',false)
 #
 # [*cert_file*]
 #  (optional) cert file name
 #  String value.
-#  Defaults to hiera('contrail::service_certificate',false)
+#  Defaults to hiera('contrail::service_cert_file',false)
 #
 # [*cassandra_server_list*]
 #  (optional) List IPs+port of Cassandra servers
@@ -260,9 +266,17 @@ class tripleo::network::contrail::config(
   $auth_port                    = hiera('contrail::auth_port'),
   $auth_protocol                = hiera('contrail::auth_protocol'),
   $auth_version                 = hiera('contrail::auth_version',2),
+  $auth_ca_file                 = hiera('contrail::auth_ca_file', undef),
+  $auth_ca_cert                 = hiera('contrail::auth_ca_cert', undef),
   $cassandra_server_list        = hiera('contrail_database_node_ips'),
-  $ca_file                      = hiera('contrail::service_certificate',false),
-  $cert_file                    = hiera('contrail::service_certificate',false),
+  $ssl_enabled                  = hiera('contrail_ssl_enabled', false),
+  $internal_api_ssl             = hiera('contrail_internal_api_ssl', false),
+  $ca_file                      = hiera('contrail::ca_cert_file', undef),
+  $ca_cert                      = hiera('contrail::ca_cert', undef),
+  $ca_key_file                  = hiera('contrail::ca_key_file', undef),
+  $ca_key                       = hiera('contrail::ca_key', undef),
+  $key_file                     = hiera('contrail::service_key_file', undef),
+  $cert_file                    = hiera('contrail::service_cert_file', undef),
   $config_hostnames             = hiera('contrail_config_short_node_names'),
   $control_server_list          = hiera('contrail_control_node_ips'),
   $contrail_version             = hiera('contrail::contrail_version',4),
@@ -289,6 +303,8 @@ class tripleo::network::contrail::config(
   $rabbit_user                  = hiera('contrail::rabbit_user'),
   $rabbit_password              = hiera('contrail::rabbit_password'),
   $rabbit_port                  = hiera('contrail::rabbit_port'),
+  $rabbit_use_ssl               = hiera('contrail::rabbit_use_ssl', false),
+  $rabbit_ca_file               = hiera('contrail::rabbit_ca_file', undef),
   $redis_server                 = hiera('contrail::config::redis_server'),
   $zk_server_ip                 = hiera('contrail_database_node_ips'),
 )
@@ -320,8 +336,26 @@ class tripleo::network::contrail::config(
     $vnc_authn_url = '/v3/auth/tokens'
   }
   $auth_url = "${auth_protocol}://${auth_host}:${auth_port}/${auth_url_suffix}"
-  if $auth_protocol == 'https' {
-    $keystone_config_proto = {
+  if $internal_api_ssl {
+    if $auth_ca_file {
+      $cafile_keystone = {
+        'KEYSTONE' => {
+          'cafile' => $auth_ca_file,
+        }
+      }
+      $cafile_vnc_api = {
+        'global' => {
+          'cafile' => $auth_ca_file,
+        },
+        'auth'   => {
+          'cafile' => $auth_ca_file,
+        },
+      }
+    } else {
+      $cafile_keystone = {}
+      $cafile_vnc_api = {}
+    }
+    $keystone_preconfig_proto = {
       'KEYSTONE' => {
         'admin_password'    => $admin_password,
         'admin_tenant_name' => $admin_tenant_name,
@@ -333,20 +367,28 @@ class tripleo::network::contrail::config(
         'insecure'          => $insecure,
         'memcached_servers' => $memcached_servers,
         'certfile'          => $cert_file,
-        'cafile'            => $ca_file,
+        'keyfile'           => $key_file,
         'region_name'       => $keystone_region,
       },
     }
-    $vnc_api_lib_config = {
-      'auth' => {
+    $keystone_config_proto = deep_merge($keystone_preconfig_proto, $cafile_keystone)
+    $vnc_api_lib_preconfig = {
+      'global' => {
+        'insecure' => $insecure,
+        'certfile' => $cert_file,
+        'keyfile'  => $key_file,
+      },
+      'auth'   => {
         'AUTHN_SERVER'   => $auth_host,
         'AUTHN_PORT'     => $auth_port,
         'AUTHN_PROTOCOL' => $auth_protocol,
         'AUTHN_URL'      => $vnc_authn_url,
+        'insecure'       => $insecure,
         'certfile'       => $cert_file,
-        'cafile'         => $ca_file,
+        'keyfile'        => $key_file,
       },
     }
+    $vnc_api_lib_config = deep_merge($vnc_api_lib_preconfig, $cafile_vnc_api)
   } else {
     $keystone_config_proto = {
       'KEYSTONE' => {
@@ -364,34 +406,121 @@ class tripleo::network::contrail::config(
     }
     $vnc_api_lib_config = {
       'auth' => {
-        'AUTHN_SERVER' => $auth_host,
-        'AUTHN_URL'    => $vnc_authn_url,
+        'AUTHN_SERVER'    => $auth_host,
+        'AUTHN_PORT'      => $auth_port,
+        'AUTHN_PROTOCOL'  => $auth_protocol,
+        'AUTHN_URL'       => $vnc_authn_url,
       },
     }
   }
   $keystone_config = deep_merge($keystone_config_proto, $keystone_config_ver)
+  $sandesh_config = {
+    'introspect_ssl_enable' => $ssl_enabled,
+    'sandesh_ssl_enable'    => $ssl_enabled,
+    'sandesh_keyfile'       => $key_file,
+    'sandesh_certfile'      => $cert_file,
+    'sandesh_ca_cert'       => $ca_file,
+  }
+  if $step == 1 {
+    class { '::tripleo::network::contrail::certmonger':
+      host_ip      => $host_ip,
+      ssl_enabled  => $ssl_enabled or $internal_api_ssl,
+      key_file     => $key_file,
+      cert_file    => $cert_file,
+      ca_file      => $ca_file,
+      ca_cert      => $ca_cert,
+      ca_key_file  => $ca_key_file,
+      ca_key       => $ca_key,
+      auth_ca_cert => $auth_ca_cert,
+      auth_ca_file => $auth_ca_file,
+    }
+  }
   if $step >= 3 {
     if $contrail_version == 3 {
+      if $rabbit_use_ssl {
+        $rabbit_config = {
+          'kombu_ssl_certfile' => $cert_file,
+          'kombu_ssl_keyfile'  => $key_file,
+          'kombu_ssl_ca_certs' => $rabbit_ca_file,
+        }
+      } else {
+        $rabbit_config = {}
+      }
+      $api_config_default_common =  {
+        'aaa_mode'              => $aaa_mode,
+        'auth'                  => $auth,
+        'cassandra_server_list' => $cassandra_server_list_9160,
+        'disc_server_ip'        => $disc_server_ip,
+        'disc_server_port'      => $disc_server_port,
+        'ifmap_password'        => $ifmap_password,
+        'ifmap_server_ip'       => $ifmap_server_ip,
+        'ifmap_username'        => $ifmap_username,
+        'listen_ip_addr'        => $listen_ip_address,
+        'listen_port'           => $listen_port,
+        'rabbit_server'         => $rabbit_server_list_5672,
+        'rabbit_user'           => $rabbit_user,
+        'rabbit_password'       => $rabbit_password,
+        'rabbit_use_ssl'        => $rabbit_use_ssl,
+        'redis_server'          => $redis_server,
+        'zk_server_ip'          => $zk_server_ip_2181,
+      }
+      $api_config_default = deep_merge($api_config_default_common, $rabbit_config)
+      $device_manager_config_default_common =  {
+        'api_server_ip'         => $api_server,
+        'api_server_port'       => $api_port,
+        'api_server_use_ssl'    => $internal_api_ssl,
+        'cassandra_server_list' => $cassandra_server_list_9160,
+        'disc_server_ip'        => $disc_server_ip,
+        'disc_server_port'      => $disc_server_port,
+        'rabbit_server'         => $rabbit_server_list_5672,
+        'rabbit_user'           => $rabbit_user,
+        'rabbit_password'       => $rabbit_password,
+        'rabbit_use_ssl'        => $rabbit_use_ssl,
+        'redis_server'          => $redis_server,
+        'zk_server_ip'          => $zk_server_ip_2181,
+      }
+      $device_manager_config_default = deep_merge($device_manager_config_default_common, $rabbit_config)
+      $svc_monitor_config_default_common =  {
+        'api_server_ip'         => $api_server,
+        'api_server_port'       => $api_port,
+        'cassandra_server_list' => $cassandra_server_list_9160,
+        'disc_server_ip'        => $disc_server_ip,
+        'disc_server_port'      => $disc_server_port,
+        'ifmap_password'        => $ifmap_password,
+        'ifmap_server_ip'       => $ifmap_server_ip,
+        'ifmap_username'        => $ifmap_username,
+        'rabbit_server'         => $rabbit_server_list_5672,
+        'rabbit_user'           => $rabbit_user,
+        'rabbit_password'       => $rabbit_password,
+        'rabbit_use_ssl'        => $rabbit_use_ssl,
+        'redis_server'          => $redis_server,
+        'zk_server_ip'          => $zk_server_ip_2181,
+        'api_server_use_ssl'    => $internal_api_ssl,
+      }
+      $svc_monitor_config_default = deep_merge($svc_monitor_config_default_common, $rabbit_config)
+      $schema_config_default_common =  {
+        'api_server_ip'         => $api_server,
+        'api_server_port'       => $api_port,
+        'api_server_use_ssl'    => $internal_api_ssl,
+        'cassandra_server_list' => $cassandra_server_list_9160,
+        'disc_server_ip'        => $disc_server_ip,
+        'disc_server_port'      => $disc_server_port,
+        'ifmap_password'        => $ifmap_password,
+        'ifmap_server_ip'       => $ifmap_server_ip,
+        'ifmap_username'        => $ifmap_username,
+        'rabbit_server'         => $rabbit_server_list_5672,
+        'rabbit_user'           => $rabbit_user,
+        'rabbit_password'       => $rabbit_password,
+        'rabbit_use_ssl'        => $rabbit_use_ssl,
+        'redis_server'          => $redis_server,
+        'zk_server_ip'          => $zk_server_ip_2181,
+      }
+      $schema_config_default = deep_merge($schema_config_default_common, $rabbit_config)
       class {'::contrail::config':
         contrail_version        => $contrail_version,
         api_config              => {
-          'DEFAULTS' => {
-            'aaa_mode'              => $aaa_mode,
-            'auth'                  => $auth,
-            'cassandra_server_list' => $cassandra_server_list_9160,
-            'disc_server_ip'        => $disc_server_ip,
-            'disc_server_port'      => $disc_server_port,
-            'ifmap_password'        => $ifmap_password,
-            'ifmap_server_ip'       => $ifmap_server_ip,
-            'ifmap_username'        => $ifmap_username,
-            'listen_ip_addr'        => $listen_ip_address,
-            'listen_port'           => $listen_port,
-            'rabbit_server'         => $rabbit_server_list_5672,
-            'rabbit_user'           => $rabbit_user,
-            'rabbit_password'       => $rabbit_password,
-            'redis_server'          => $redis_server,
-            'zk_server_ip'          => $zk_server_ip_2181,
-          },
+          'DEFAULTS' => $api_config_default,
+          'SANDESH'  => $sandesh_config,
         },
         basicauthusers_property => $basicauthusers_property,
         config_nodemgr_config   => {
@@ -399,129 +528,124 @@ class tripleo::network::contrail::config(
             'server' => $disc_server_ip,
             'port'   => $disc_server_port,
           },
+          'SANDESH'   => $sandesh_config,
         },
         device_manager_config   => {
-          'DEFAULTS' => {
-            'api_server_ip'         => $api_server,
-            'api_server_port'       => $api_port,
-            'cassandra_server_list' => $cassandra_server_list_9160,
-            'disc_server_ip'        => $disc_server_ip,
-            'disc_server_port'      => $disc_server_port,
-            'rabbit_server'         => $rabbit_server_list_5672,
-            'rabbit_user'           => $rabbit_user,
-            'rabbit_password'       => $rabbit_password,
-            'redis_server'          => $redis_server,
-            'zk_server_ip'          => $zk_server_ip_2181,
-          },
+          'DEFAULTS' => $device_manager_config_default,
+          'SANDESH'  => $sandesh_config,
         },
         discovery_config        => {
           'DEFAULTS' => {
             'cassandra_server_list' => $cassandra_server_list_9160,
             'zk_server_ip'          => $zk_server_ip_2181,
             },
+          'SANDESH'  => $sandesh_config,
         },
         keystone_config         => $keystone_config,
         schema_config           => {
-          'DEFAULTS' => {
-            'api_server_ip'         => $api_server,
-            'api_server_port'       => $api_port,
-            'cassandra_server_list' => $cassandra_server_list_9160,
-            'disc_server_ip'        => $disc_server_ip,
-            'disc_server_port'      => $disc_server_port,
-            'ifmap_password'        => $ifmap_password,
-            'ifmap_server_ip'       => $ifmap_server_ip,
-            'ifmap_username'        => $ifmap_username,
-            'rabbit_server'         => $rabbit_server_list_5672,
-            'rabbit_user'           => $rabbit_user,
-            'rabbit_password'       => $rabbit_password,
-            'redis_server'          => $redis_server,
-            'zk_server_ip'          => $zk_server_ip_2181,
-          },
+          'DEFAULTS' => $schema_config_default,
+          'SANDESH'  => $sandesh_config,
         },
         svc_monitor_config      => {
-          'DEFAULTS' => {
-            'api_server_ip'         => $api_server,
-            'api_server_port'       => $api_port,
-            'cassandra_server_list' => $cassandra_server_list_9160,
-            'disc_server_ip'        => $disc_server_ip,
-            'disc_server_port'      => $disc_server_port,
-            'ifmap_password'        => $ifmap_password,
-            'ifmap_server_ip'       => $ifmap_server_ip,
-            'ifmap_username'        => $ifmap_username,
-            'rabbit_server'         => $rabbit_server_list_5672,
-            'rabbit_user'           => $rabbit_user,
-            'rabbit_password'       => $rabbit_password,
-            'redis_server'          => $redis_server,
-            'zk_server_ip'          => $zk_server_ip_2181,
-          },
+          'DEFAULTS' => $svc_monitor_config_default,
+          'SANDESH'  => $sandesh_config,
         },
         vnc_api_lib_config      => $vnc_api_lib_config,
       }
     } else {
+      if $rabbit_use_ssl {
+        $rabbit_config = {
+          'kombu_ssl_certfile' => $cert_file,
+          'kombu_ssl_keyfile'  => $key_file,
+          'kombu_ssl_ca_certs' => $rabbit_ca_file,
+        }
+      } else {
+        $rabbit_config = {}
+      }
+      $api_config_default_common =  {
+        'aaa_mode'              => $aaa_mode,
+        'auth'                  => $auth,
+        'cassandra_server_list' => $cassandra_server_list_9160,
+        'collectors'            => $collector_server_list_8086,
+        'listen_ip_addr'        => $listen_ip_address,
+        'listen_port'           => $listen_port,
+        'rabbit_server'         => $rabbit_server_list_5672,
+        'rabbit_user'           => $rabbit_user,
+        'rabbit_password'       => $rabbit_password,
+        'rabbit_use_ssl'        => $rabbit_use_ssl,
+        'redis_server'          => $redis_server,
+        'zk_server_ip'          => $zk_server_ip_2181,
+      }
+      $api_config_default = deep_merge($api_config_default_common, $rabbit_config)
+      $device_manager_config_default_common =  {
+        'api_server_ip'         => $api_server,
+        'api_server_port'       => $api_port,
+        'api_server_use_ssl'    => $internal_api_ssl,
+        'cassandra_server_list' => $cassandra_server_list_9160,
+        'collectors'            => $collector_server_list_8086,
+        'rabbit_server'         => $rabbit_server_list_5672,
+        'rabbit_user'           => $rabbit_user,
+        'rabbit_password'       => $rabbit_password,
+        'rabbit_use_ssl'        => $rabbit_use_ssl,
+        'redis_server'          => $redis_server,
+        'zk_server_ip'          => $zk_server_ip_2181,
+      }
+      $device_manager_config_default = deep_merge($device_manager_config_default_common, $rabbit_config)
+      $svc_monitor_config_default_common =  {
+        'api_server_ip'         => $api_server,
+        'api_server_port'       => $api_port,
+        'api_server_use_ssl'    => $internal_api_ssl,
+        'cassandra_server_list' => $cassandra_server_list_9160,
+        'collectors'            => $collector_server_list_8086,
+        'rabbit_server'         => $rabbit_server_list_5672,
+        'rabbit_user'           => $rabbit_user,
+        'rabbit_password'       => $rabbit_password,
+        'rabbit_use_ssl'        => $rabbit_use_ssl,
+        'redis_server'          => $redis_server,
+        'zk_server_ip'          => $zk_server_ip_2181,
+      }
+      $svc_monitor_config_default = deep_merge($svc_monitor_config_default_common, $rabbit_config)
+      $schema_config_default_common =  {
+        'api_server_ip'         => $api_server,
+        'api_server_port'       => $api_port,
+        'api_server_use_ssl'    => $internal_api_ssl,
+        'cassandra_server_list' => $cassandra_server_list_9160,
+        'collectors'            => $collector_server_list_8086,
+        'rabbit_server'         => $rabbit_server_list_5672,
+        'rabbit_user'           => $rabbit_user,
+        'rabbit_password'       => $rabbit_password,
+        'rabbit_use_ssl'        => $rabbit_use_ssl,
+        'redis_server'          => $redis_server,
+        'zk_server_ip'          => $zk_server_ip_2181,
+      }
+      $schema_config_default = deep_merge($schema_config_default_common, $rabbit_config)
       class {'::contrail::config':
         contrail_version      => $contrail_version,
         api_config            => {
-          'DEFAULTS' => {
-            'aaa_mode'              => $aaa_mode,
-            'auth'                  => $auth,
-            'cassandra_server_list' => $cassandra_server_list_9160,
-            'collectors'            => $collector_server_list_8086,
-            'listen_ip_addr'        => $listen_ip_address,
-            'listen_port'           => $listen_port,
-            'rabbit_server'         => $rabbit_server_list_5672,
-            'rabbit_user'           => $rabbit_user,
-            'rabbit_password'       => $rabbit_password,
-            'redis_server'          => $redis_server,
-            'zk_server_ip'          => $zk_server_ip_2181,
-          },
+          'DEFAULTS' => $api_config_default,
+          'SANDESH'  => $sandesh_config,
         },
         config_nodemgr_config => {
           'COLLECTOR' => {
             'server_list'           => $collector_server_list_8086,
           },
+          'SANDESH'   => $sandesh_config,
         },
         device_manager_config => {
-          'DEFAULTS' => {
-            'api_server_ip'         => $api_server,
-            'api_server_port'       => $api_port,
-            'cassandra_server_list' => $cassandra_server_list_9160,
-            'collectors'            => $collector_server_list_8086,
-            'rabbit_server'         => $rabbit_server_list_5672,
-            'rabbit_user'           => $rabbit_user,
-            'rabbit_password'       => $rabbit_password,
-            'redis_server'          => $redis_server,
-            'zk_server_ip'          => $zk_server_ip_2181,
-          },
+          'DEFAULTS' => $device_manager_config_default,
+          'SANDESH'  => $sandesh_config,
         },
         keystone_config       => $keystone_config,
         schema_config         => {
-          'DEFAULTS' => {
-            'api_server_ip'         => $api_server,
-            'api_server_port'       => $api_port,
-            'cassandra_server_list' => $cassandra_server_list_9160,
-            'collectors'            => $collector_server_list_8086,
-            'rabbit_server'         => $rabbit_server_list_5672,
-            'rabbit_user'           => $rabbit_user,
-            'rabbit_password'       => $rabbit_password,
-            'redis_server'          => $redis_server,
-            'zk_server_ip'          => $zk_server_ip_2181,
-          },
+          'DEFAULTS' => $schema_config_default,
+          'SANDESH'  => $sandesh_config,
         },
         svc_monitor_config    => {
-          'DEFAULTS'  => {
-            'api_server_ip'         => $api_server,
-            'api_server_port'       => $api_port,
-            'cassandra_server_list' => $cassandra_server_list_9160,
-            'collectors'            => $collector_server_list_8086,
-            'rabbit_server'         => $rabbit_server_list_5672,
-            'rabbit_user'           => $rabbit_user,
-            'rabbit_password'       => $rabbit_password,
-            'redis_server'          => $redis_server,
-            'zk_server_ip'          => $zk_server_ip_2181,
-          },
+          'DEFAULTS'  => $svc_monitor_config_default,
           'SCHEDULER' => {
             'analytics_server_list' => $analytics_server_list_8081,
           },
+          'SANDESH'   => $sandesh_config,
         },
         vnc_api_lib_config    => $vnc_api_lib_config,
       }
@@ -531,6 +655,7 @@ class tripleo::network::contrail::config(
     class {'::contrail::config::provision_config':
       api_address                => $api_server,
       api_port                   => $api_port,
+      api_server_use_ssl         => $internal_api_ssl,
       config_node_address        => $host_ip,
       config_node_name           => $::hostname,
       keystone_admin_user        => $admin_user,
@@ -541,6 +666,7 @@ class tripleo::network::contrail::config(
     class {'::contrail::config::provision_alarm':
       api_address                => $api_server,
       api_port                   => $api_port,
+      api_server_use_ssl         => $internal_api_ssl,
       keystone_admin_user        => $admin_user,
       keystone_admin_password    => $admin_password,
       keystone_admin_tenant_name => $admin_tenant_name,
@@ -549,6 +675,7 @@ class tripleo::network::contrail::config(
       class {'::contrail::config::provision_linklocal':
         api_address                => $api_server,
         api_port                   => $api_port,
+        api_server_use_ssl         => $internal_api_ssl,
         ipfabric_service_ip        => $internal_vip,
         ipfabric_service_port      => $ipfabric_service_port,
         keystone_admin_user        => $admin_user,
