@@ -19,6 +19,10 @@
 #
 # == Parameters:
 #
+# [*step*]
+#  The current step of the deployment
+#  Defaults to hiera('step')
+#
 # [*admin_password*]
 #  (optional) admin password
 #  String value.
@@ -115,7 +119,7 @@
 #  Defaults to hiera('contrail::service_key_file',false)
 #
 class tripleo::network::contrail::webui(
-  $step                      = hiera('step'),
+  $step                      = Integer(hiera('step')),
   $admin_password            = hiera('contrail::admin_password'),
   $admin_tenant_name         = hiera('contrail::admin_tenant_name'),
   $admin_token               = hiera('contrail::admin_token'),
