@@ -81,8 +81,13 @@ class tripleo::network::contrail::heat(
     $use_ssl = 'True'
   }
 
+  $plugin_dirs = '/usr/lib/python2.7/dist-packages/vnc_api/gen/heat/resources,/usr/lib/python2.7/site-packages/contrail_heat/resources'
+
   class {'::contrail::heat':
     heat_config            => {
+      'DEFAULT'          => {
+        'plugin_dirs' => $plugin_dirs,
+      },
       'clients_contrail' => {
         'api_base_url' => '/',
         'api_server'   => $api_server,
