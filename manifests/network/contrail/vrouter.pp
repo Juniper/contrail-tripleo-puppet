@@ -67,10 +67,10 @@
 #  Integer value.
 #  Defaults to hiera('contrail::auth_port')
 #
-# [*auth_protocol*]
-#  (optional) authentication protocol.
-#  String value.
-#  Defaults to hiera('contrail::auth_protocol')
+# [*ssl_enabled*]
+#  (optional) SSL should be used in internal Contrail services communications
+#  Boolean value.
+#  Defaults to hiera('contrail_ssl_enabled', false)
 #
 # [*auth_version*]
 #  (optional) authentication protocol version.
@@ -80,12 +80,17 @@
 # [*ca_file*]
 #  (optional) ca file name
 #  String value.
-#  Defaults to hiera('contrail::service_certificate',false)
+#  Defaults to hiera('contrail::ca_cert_file',false)
+#
+# [*key_file*]
+#  (optional) key file name
+#  String value.
+#  Defaults to hiera('contrail::service_key_file',false)
 #
 # [*cert_file*]
 #  (optional) cert file name
 #  String value.
-#  Defaults to hiera('contrail::service_certificate',false)
+#  Defaults to hiera('contrail::service_cert_file',false)
 #
 # [*control_server*]
 #  (optional) Contrail control server IP
@@ -200,10 +205,18 @@ class tripleo::network::contrail::vrouter (
   $auth_port                    = hiera('contrail::auth_port'),
   $auth_protocol                = hiera('contrail::auth_protocol'),
   $auth_version                 = hiera('contrail::auth_version',2),
-  $ca_file                      = hiera('contrail::service_certificate', undef),
-  $cert_file                    = hiera('contrail::service_certificate', undef),
+  $auth_ca_file                 = hiera('contrail::auth_ca_file', undef),
+  $auth_ca_cert                 = hiera('contrail::auth_ca_cert', undef),
+  $ssl_enabled                  = hiera('contrail_ssl_enabled', false),
+  $internal_api_ssl             = hiera('contrail_internal_api_ssl', false),
+  $ca_file                      = hiera('contrail::ca_cert_file', undef),
+  $ca_cert                      = hiera('contrail::ca_cert', undef),
+  $ca_key_file                  = hiera('contrail::ca_key_file', undef),
+  $ca_key                       = hiera('contrail::ca_key', undef),
+  $key_file                     = hiera('contrail::service_key_file', undef),
+  $cert_file                    = hiera('contrail::service_cert_file', undef),
   $contrail_version             = hiera('contrail::contrail_version',4),
-  $control_server               = hiera('contrail_config_node_ips',hiera('contrail::vrouter::control_node_ips')),
+  $control_server               = hiera('contrail_control_node_ips',hiera('contrail::vrouter::control_node_ips')),
   $disc_server_ip               = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port             = hiera('contrail::disc_server_port'),
   $gateway                      = hiera('contrail::vrouter::gateway'),
@@ -224,19 +237,35 @@ class tripleo::network::contrail::vrouter (
   $is_dpdk                      = hiera('contrail::vrouter::is_dpdk',false),
   $dpdk_driver                  = hiera('contrail::vrouter::dpdk_driver',false),
   $sriov_on                     = hiera('contrail::vrouter::sriov_on', false),
-  $ssl_enabled                  = hiera('contrail_ssl_enabled', false)
 ) {
   $cidr = netmask_to_cidr($netmask)
-  $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
-  if size($control_server) == 0 {
+  $vrouter_analytics_server_list = hiera('contrail::vrouter::analytics_node_ips', [])
+  if size($vrouter_analytics_server_list) != 0 {
+    $analytics_node_ips = $vrouter_analytics_server_list
+  } else {
+    $analytics_node_ips = $analytics_server_list
+  }
+  if size($analytics_node_ips) == 0 {
+      $collector_server_list_8086 = ''
+  } else {
+    $collector_server_list_8086 = join([join($analytics_node_ips, ':8086 '),':8086'],'')
+  }
+  $vrouter_control_server_list = hiera('contrail::vrouter::control_node_ips', [])
+  if size($vrouter_control_server_list) != 0 {
+    $control_node_ips = $vrouter_control_server_list
+  } else {
+    $control_node_ips = $control_server
+  }
+  if size($control_node_ips) == 0 {
     $control_server_list = ''
     $control_server_list_53 = ''
     $control_server_list_5269 = ''
   } else {
-    $control_server_list = join($control_server, ' ')
-    $control_server_list_53 = join([join($control_server, ':53 '),':53'],'')
-    $control_server_list_5269 = join([join($control_server, ':5269 '),':5269'],'')
+    $control_server_list = join($control_node_ips, ' ')
+    $control_server_list_53 = join([join($control_node_ips, ':53 '),':53'],'')
+    $control_server_list_5269 = join([join($control_node_ips, ':5269 '),':5269'],'')
   }
+
   if $auth_version == 2 {
     $keystone_config_ver = {}
     $auth_url_suffix = 'v2.0'
@@ -262,7 +291,6 @@ class tripleo::network::contrail::vrouter (
       'auth_port'         => $auth_port,
       'auth_protocol'     => $auth_protocol,
       'auth_url'          => $auth_url,
-      'insecure'          => $insecure,
       'memcached_servers' => $memcached_servers,
       'region_name'       => $keystone_region,
     },
@@ -275,22 +303,56 @@ class tripleo::network::contrail::vrouter (
       'AUTHN_URL'      => $vnc_authn_url,
     },
   }
-  if $auth_protocol == 'https' {
-    $keystone_config_auth_specific = {
+  if $internal_api_ssl {
+    if $auth_ca_file {
+      $cafile_keystone = {
+        'KEYSTONE' => {
+          'cafile' => $auth_ca_file,
+        }
+      }
+      $cafile_vnc_api = {
+        'global' => {
+          'cafile' => $auth_ca_file,
+        },
+        'auth'   => {
+          'cafile' => $auth_ca_file,
+        },
+      }
+    } else {
+      $cafile_keystone = {}
+      $cafile_vnc_api = {}
+    }
+    $keystone_preconfig_auth_specific = {
       'KEYSTONE' => {
-        'certfile'          => $cert_file,
-        'cafile'            => $ca_file,
+        'insecure'  => $insecure,
+        'certfile'  => $cert_file,
+        'keyfile'   => $key_file,
       },
     }
-    $vnc_api_lib_config_auth_specific = {
-      'auth' => {
-        'certfile'       => $cert_file,
-        'cafile'         => $ca_file,
+    $keystone_config_auth_specific = deep_merge($keystone_preconfig_auth_specific, $cafile_keystone)
+    $vnc_api_lib_preconfig_auth_specific = {
+      'global' => {
+        'insecure' => $insecure,
+        'certfile' => $cert_file,
+        'keyfile'  => $key_file,
+      },
+      'auth'   => {
+        'insecure'   => $insecure,
+        'certfile'   => $cert_file,
+        'keyfile'    => $key_file,
       },
     }
+    $vnc_api_lib_config_auth_specific = deep_merge($vnc_api_lib_preconfig_auth_specific, $cafile_vnc_api)
   } else {
     $keystone_config_auth_specific = {}
     $vnc_api_lib_config_auth_specific = {}
+  }
+  $sandesh_config = {
+    'introspect_ssl_enable' => $ssl_enabled,
+    'sandesh_ssl_enable'    => $ssl_enabled,
+    'sandesh_keyfile'       => $key_file,
+    'sandesh_certfile'      => $cert_file,
+    'sandesh_ca_cert'       => $ca_file,
   }
 
   if $contrail_version < 4 {
@@ -300,6 +362,7 @@ class tripleo::network::contrail::vrouter (
     }
     $nodemgr_config = {
       'DISCOVERY' => $disco,
+      'SANDESH'   => $sandesh_config,
     }
     $vrouter_agent_config_ver_specific = {
       'DISCOVERY' => $disco,
@@ -320,16 +383,11 @@ class tripleo::network::contrail::vrouter (
       'COLLECTOR' => {
         'server_list'   => $collector_server_list_8086,
       },
+      'SANDESH'   => $sandesh_config,
     }
     $vrouter_agent_config_ver_specific = {
       'DEFAULT' => {
         'collectors'                      => $collector_server_list_8086,
-        'xmpp_auth_enable'                => $ssl_enabled,
-        'xmpp_dns_auth_enable'            => $ssl_enabled,
-      },
-      'SANDESH' => {
-        'introspect_ssl_enable'           => $ssl_enabled,
-        'sandesh_ssl_enable'              => $ssl_enabled,
       },
       'DNS'  => {
         'servers' => $control_server_list_53,
@@ -366,6 +424,13 @@ class tripleo::network::contrail::vrouter (
     $vnc_api_lib_config_ver_specific
   )
   $vrouter_agent_config_common = {
+    'DEFAULT' => {
+      'xmpp_auth_enable'     => $ssl_enabled,
+      'xmpp_dns_auth_enable' => $ssl_enabled,
+      'xmpp_ca_cert'         => $ca_file,
+      'xmpp_server_cert'     => $cert_file,
+      'xmpp_server_key'      => $key_file,
+    },
     'NETWORKS'  => {
       'control_network_ip' => $host_ip,
     },
@@ -379,6 +444,7 @@ class tripleo::network::contrail::vrouter (
     'METADATA' => {
       'metadata_proxy_secret' => $metadata_secret,
     },
+    'SANDESH'  => $sandesh_config,
   }
   if !$is_dpdk {
     $macaddress = inline_template("<%= scope.lookupvar('::macaddress_${physical_interface}') -%>")
@@ -430,6 +496,21 @@ class tripleo::network::contrail::vrouter (
     $vrouter_agent_config_ver_specific
   )
 
+  if $step == 1 {
+    class { '::tripleo::network::contrail::certmonger':
+      host_ip      => $host_ip,
+      ssl_enabled  => $ssl_enabled or $internal_api_ssl,
+      key_file     => $key_file,
+      cert_file    => $cert_file,
+      ca_file      => $ca_file,
+      ca_cert      => $ca_cert,
+      ca_key_file  => $ca_key_file,
+      ca_key       => $ca_key,
+      auth_ca_cert => $auth_ca_cert,
+      auth_ca_file => $auth_ca_file,
+    }
+  }
+
   if $step >= 4 {
     if $sriov_on {
       include ::tripleo::host::sriov
@@ -456,6 +537,7 @@ class tripleo::network::contrail::vrouter (
     class {'::contrail::vrouter::provision_vrouter':
       api_address                => $api_server,
       api_port                   => $api_port,
+      api_server_use_ssl         => $internal_api_ssl,
       host_ip                    => $host_ip,
       node_name                  => $::hostname,
       keystone_admin_user        => $admin_user,

@@ -73,25 +73,30 @@
 #  Integer value.
 #  Defaults to hiera('contrail::auth_port')
 #
-# [*auth_protocol*]
-#  (optional) authentication protocol.
-#  String value.
-#  Defaults to hiera('contrail::auth_protocol')
-#
 # [*auth_version*]
 #  (optional) authentication protocol version.
 #  Integer value.
 #  Defaults to hiera('contrail::auth_version',2)
 #
+# [*ssl_enabled*]
+#  (optional) SSL should be used in internal Contrail services communications
+#  Boolean value.
+#  Defaults to hiera('contrail_ssl_enabled', false)
+#
 # [*ca_file*]
 #  (optional) ca file name
 #  String value.
-#  Defaults to hiera('contrail::service_certificate',false)
+#  Defaults to hiera('contrail::ca_cert_file',false)
+#
+# [*key_file*]
+#  (optional) key file name
+#  String value.
+#  Defaults to hiera('contrail::service_key_file',false)
 #
 # [*cert_file*]
 #  (optional) cert file name
 #  String value.
-#  Defaults to hiera('contrail::service_certificate',false)
+#  Defaults to hiera('contrail::service_cert_file',false)
 #
 # [*cassandra_server_list*]
 #  (optional) List IPs+port of Cassandra servers
@@ -235,11 +240,19 @@ class tripleo::network::contrail::analytics(
   $auth_port                    = hiera('contrail::auth_port'),
   $auth_protocol                = hiera('contrail::auth_protocol'),
   $auth_version                 = hiera('contrail::auth_version',2),
+  $auth_ca_file                 = hiera('contrail::auth_ca_file', undef),
+  $auth_ca_cert                 = hiera('contrail::auth_ca_cert', undef),
   $analytics_aaa_mode           = hiera('contrail::analytics_aaa_mode'),
   $analytics_server_list        = hiera('contrail_analytics_node_ips'),
   $cassandra_server_list        = hiera('contrail_analytics_database_node_ips'),
-  $ca_file                      = hiera('contrail::service_certificate',false),
-  $cert_file                    = hiera('contrail::service_certificate',false),
+  $ssl_enabled                  = hiera('contrail_ssl_enabled', false),
+  $internal_api_ssl             = hiera('contrail_internal_api_ssl', false),
+  $ca_file                      = hiera('contrail::ca_cert_file', undef),
+  $ca_cert                      = hiera('contrail::ca_cert', undef),
+  $ca_key_file                  = hiera('contrail::ca_key_file', undef),
+  $ca_key                       = hiera('contrail::ca_key', undef),
+  $key_file                     = hiera('contrail::service_key_file', undef),
+  $cert_file                    = hiera('contrail::service_cert_file', undef),
   $config_server_list           = hiera('contrail_config_node_ips'),
   $collector_http_server_port   = hiera('contrail::analytics::collector_http_server_port'),
   $collector_sandesh_port       = hiera('contrail::analytics::collector_sandesh_port'),
@@ -261,6 +274,8 @@ class tripleo::network::contrail::analytics(
   $rabbit_password              = hiera('contrail::rabbit_password'),
   $rabbit_port                  = hiera('contrail::rabbit_port'),
   $rabbit_vhost                 = hiera('contrail::rabbit_vhost','/'),
+  $rabbit_use_ssl               = hiera('contrail::rabbit_use_ssl', false),
+  $rabbit_ca_file               = hiera('contrail::rabbit_ca_file', undef),
   $redis_server                 = hiera('contrail::analytics::redis_server'),
   $redis_server_port            = hiera('contrail::analytics::redis_server_port'),
   $rest_api_ip                  = hiera('contrail::analytics::rest_api_ip'),
@@ -294,8 +309,24 @@ class tripleo::network::contrail::analytics(
     $vnc_authn_url = '/v3/auth/tokens'
   }
   $auth_url = "${auth_protocol}://${auth_host}:${auth_port}/${auth_url_suffix}"
-  if $auth_protocol == 'https' {
-    $keystone_config_proto = {
+  if $internal_api_ssl {
+    if $auth_ca_file {
+      $cafile_keystone = {
+        'cafile' => $auth_ca_file,
+      }
+      $cafile_vnc_api = {
+        'global' => {
+          'cafile' => $auth_ca_file,
+        },
+        'auth'   => {
+          'cafile' => $auth_ca_file,
+        },
+      }
+    } else {
+      $cafile_keystone = {}
+      $cafile_vnc_api = {}
+    }
+    $keystone_preconfig_proto = {
         'admin_password'    => $admin_password,
         'admin_tenant_name' => $admin_tenant_name,
         'admin_user'        => $admin_user,
@@ -305,19 +336,27 @@ class tripleo::network::contrail::analytics(
         'auth_url'          => $auth_url,
         'insecure'          => $insecure,
         'certfile'          => $cert_file,
-        'cafile'            => $ca_file,
+        'keyfile'           => $key_file,
         'region_name'       => $keystone_region,
     }
-    $vnc_api_lib_config = {
-      'auth' => {
+    $keystone_config_proto = deep_merge($keystone_preconfig_proto, $cafile_keystone)
+    $vnc_api_lib_preconfig = {
+      'global' => {
+        'insecure' => $insecure,
+        'certfile' => $cert_file,
+        'keyfile'  => $key_file,
+      },
+      'auth'   => {
         'AUTHN_SERVER'   => $auth_host,
         'AUTHN_PORT'     => $auth_port,
         'AUTHN_PROTOCOL' => $auth_protocol,
         'AUTHN_URL'      => $vnc_authn_url,
+        'insecure'       => $insecure,
         'certfile'       => $cert_file,
-        'cafile'         => $ca_file,
+        'keyfile'        => $key_file,
       },
     }
+    $vnc_api_lib_config = deep_merge($vnc_api_lib_preconfig, $cafile_vnc_api)
   } else {
     $keystone_config_proto = {
         'admin_password'    => $admin_password,
@@ -332,12 +371,45 @@ class tripleo::network::contrail::analytics(
     }
     $vnc_api_lib_config = {
       'auth' => {
-        'AUTHN_SERVER' => $auth_host,
-        'AUTHN_URL'    => $vnc_authn_url,
+        'AUTHN_SERVER'    => $auth_host,
+        'AUTHN_PORT'      => $auth_port,
+        'AUTHN_PROTOCOL'  => $auth_protocol,
+        'AUTHN_URL'       => $vnc_authn_url,
       },
     }
   }
   $keystone_config = deep_merge($keystone_config_proto, $keystone_config_ver)
+  $sandesh_config = {
+    'introspect_ssl_enable' => $ssl_enabled,
+    'sandesh_ssl_enable'    => $ssl_enabled,
+    'sandesh_keyfile'       => $key_file,
+    'sandesh_certfile'      => $cert_file,
+    'sandesh_ca_cert'       => $ca_file,
+  }
+  if $step == 1 {
+    class { '::tripleo::network::contrail::certmonger':
+      host_ip      => $host_ip,
+      ssl_enabled  => $ssl_enabled or $internal_api_ssl,
+      key_file     => $key_file,
+      cert_file    => $cert_file,
+      ca_file      => $ca_file,
+      ca_cert      => $ca_cert,
+      ca_key_file  => $ca_key_file,
+      ca_key       => $ca_key,
+      auth_ca_cert => $auth_ca_cert,
+      auth_ca_file => $auth_ca_file,
+    }
+  }
+  if $rabbit_use_ssl {
+    $rabbit_ssl_config = {
+      'rabbitmq_use_ssl'     => $rabbit_use_ssl,
+      'kombu_ssl_certfile'   => $cert_file,
+      'kombu_ssl_keyfile'    => $key_file,
+      'kombu_ssl_ca_certs'   => $rabbit_ca_file,
+    }
+  } else {
+    $rabbit_ssl_config = {}
+  }
   if $step >= 3 {
     if $contrail_version == 3 {
       class {'::contrail::analytics':
@@ -355,16 +427,19 @@ class tripleo::network::contrail::analytics(
             'disc_server_ip'   => $disc_server_ip,
             'disc_server_port' => $disc_server_port,
           },
+          'SANDESH'   => $sandesh_config,
         },
         analytics_nodemgr_config  => {
           'DISCOVERY' => {
             'server' => $disc_server_ip,
             'port'   => $disc_server_port,
           },
+          'SANDESH'   => $sandesh_config,
         },
         analytics_api_config      => {
           'DEFAULTS'  => {
             'api_server'            => "${api_server}:${api_port}",
+            'api_server_use_ssl'    => $internal_api_ssl,
             'aaa_mode'              => $analytics_aaa_mode,
             'cassandra_server_list' => $cassandra_server_list_9042,
             'host_ip'               => $host_ip,
@@ -382,6 +457,7 @@ class tripleo::network::contrail::analytics(
             'server'            => $redis_server,
           },
           'KEYSTONE'  => $keystone_config,
+          'SANDESH'   => $sandesh_config,
         },
         collector_config          => {
           'DEFAULT'   => {
@@ -402,6 +478,7 @@ class tripleo::network::contrail::analytics(
             'port'   => $redis_server_port,
             'server' => $redis_server,
           },
+          'SANDESH'   => $sandesh_config,
         },
         query_engine_config       => {
           'DEFAULT'   => {
@@ -426,6 +503,7 @@ class tripleo::network::contrail::analytics(
             'disc_server_port' => $disc_server_port,
           },
           'KEYSTONE'  => $keystone_config,
+          'SANDESH'   => $sandesh_config,
         },
         redis_config              => $redis_config,
         topology_config           => {
@@ -436,6 +514,7 @@ class tripleo::network::contrail::analytics(
             'disc_server_ip'   => $disc_server_ip,
             'disc_server_port' => $disc_server_port,
           },
+          'SANDESH'   => $sandesh_config,
         },
         vnc_api_lib_config        => $vnc_api_lib_config,
         keystone_config           => {
@@ -446,6 +525,7 @@ class tripleo::network::contrail::analytics(
         rabbitmq_vhost            => $rabbit_vhost,
         rabbitmq_user             => $rabbit_user,
         rabbitmq_password         => $rabbit_password,
+        rabbit_ssl_config         => $rabbit_ssl_config,
         config_db_cql_server_list => $config_db_server_list_9042,
         config_db_server_list     => $config_db_server_list_9160,
       }
@@ -468,11 +548,13 @@ class tripleo::network::contrail::analytics(
             'server'            => $redis_server,
             'redis_uve_list'    => $redis_server_list_6379,
           },
+          'SANDESH'    => $sandesh_config,
         },
         analytics_nodemgr_config  => {
           'COLLECTOR' => {
             'server_list'   => $collector_server_list_8086,
           },
+          'SANDESH'   => $sandesh_config,
         },
         analytics_api_config      => {
           'DEFAULTS' => {
@@ -493,6 +575,7 @@ class tripleo::network::contrail::analytics(
             'redis_uve_list'    => $redis_server_list_6379,
           },
           'KEYSTONE' => $keystone_config,
+          'SANDESH'  => $sandesh_config,
         },
         collector_config          => {
           'DEFAULT'                     => {
@@ -515,6 +598,7 @@ class tripleo::network::contrail::analytics(
             'port'   => $redis_server_port,
             'server' => $redis_server,
           },
+          'SANDESH'                     => $sandesh_config,
         },
         query_engine_config       => {
           'DEFAULT' => {
@@ -526,6 +610,7 @@ class tripleo::network::contrail::analytics(
             'port'   => $redis_server_port,
             'server' => $redis_server,
           },
+          'SANDESH' => $sandesh_config,
         },
         snmp_collector_config     => {
           'DEFAULTS'   => {
@@ -536,6 +621,7 @@ class tripleo::network::contrail::analytics(
           'API_SERVER' => {
             'api_server_list' => $config_api_server_list_8082,
           },
+          'SANDESH'    => $sandesh_config,
         },
         redis_config              => $redis_config,
         topology_config           => {
@@ -546,6 +632,7 @@ class tripleo::network::contrail::analytics(
           'API_SERVER' => {
             'api_server_list' => $config_api_server_list_8082,
           },
+          'SANDESH'    => $sandesh_config,
         },
         vnc_api_lib_config        => $vnc_api_lib_config,
         keystone_config           => {
@@ -556,6 +643,7 @@ class tripleo::network::contrail::analytics(
         rabbitmq_vhost            => $rabbit_vhost,
         rabbitmq_user             => $rabbit_user,
         rabbitmq_password         => $rabbit_password,
+        rabbit_ssl_config         => $rabbit_ssl_config,
         config_db_cql_server_list => $config_db_server_list_9042,
         config_db_server_list     => $config_db_server_list_9160,
       }
@@ -565,6 +653,7 @@ class tripleo::network::contrail::analytics(
     class {'::contrail::analytics::provision_analytics':
       api_address                => $api_server,
       api_port                   => $api_port,
+      api_server_use_ssl         => $internal_api_ssl,
       analytics_node_address     => $host_ip,
       analytics_node_name        => $::fqdn,
       keystone_admin_user        => $admin_user,

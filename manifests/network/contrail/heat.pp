@@ -59,7 +59,7 @@
 #  Integer value.
 #  Defaults to hiera('step')
 #
-# [*use_ssl*]
+# [*contrail_ssl_enabled*]
 #  (optional) switch for ssl usage
 #  String value.
 #  Defaults to 'False'
@@ -72,12 +72,22 @@ class tripleo::network::contrail::heat(
   $api_server             = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $api_port               = 8082,
   $auth_host              = hiera('contrail::auth_host'),
-  $use_ssl                = 'False',
-)
-{
+  $ssl_enabled            = hiera('contrail_ssl_enabled', false),
+
+) {
+  if $ssl_enabled {
+    $use_ssl = 'False'
+  } else {
+    $use_ssl = 'True'
+  }
+
+  $plugin_dirs = '/usr/lib/python2.7/dist-packages/vnc_api/gen/heat/resources,/usr/lib/python2.7/site-packages/contrail_heat/resources'
 
   class {'::contrail::heat':
     heat_config            => {
+      'DEFAULT'          => {
+        'plugin_dirs' => $plugin_dirs,
+      },
       'clients_contrail' => {
         'api_base_url' => '/',
         'api_server'   => $api_server,

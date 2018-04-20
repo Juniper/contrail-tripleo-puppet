@@ -118,6 +118,26 @@
 #  Array of string (IPv4) values
 #  Defaults to hiera('contrail_database_node_ips')
 #
+# [*ssl_enabled*]
+#  (optional) SSL should be used in internal Contrail services communications
+#  Boolean value.
+#  Defaults to hiera('contrail_ssl_enabled', false)
+#
+# [*ca_file*]
+#  (optional) ca file name
+#  String value.
+#  Defaults to hiera('contrail::ca_cert_file',false)
+#
+# [*key_file*]
+#  (optional) key file name
+#  String value.
+#  Defaults to hiera('contrail::service_key_file',false)
+#
+# [*cert_file*]
+#  (optional) cert file name
+#  String value.
+#  Defaults to hiera('contrail::service_cert_file',false)
+#
 class tripleo::network::contrail::database(
   $step                  = Integer(hiera('step')),
   $admin_password        = hiera('contrail::admin_password'),
@@ -139,6 +159,11 @@ class tripleo::network::contrail::database(
   $zookeeper_client_ip   = hiera('contrail::database::host_ip'),
   $zookeeper_hostnames   = hiera('contrail_database_short_node_names'),
   $zookeeper_server_ips  = hiera('contrail_database_node_ips'),
+  $ssl_enabled           = hiera('contrail_ssl_enabled', false),
+  $internal_api_ssl      = hiera('contrail_internal_api_ssl', false),
+  $ca_file               = hiera('contrail::ca_cert_file', undef),
+  $key_file              = hiera('contrail::service_key_file', undef),
+  $cert_file             = hiera('contrail::service_cert_file', undef),
 )
 {
   $collector_server_list_8086 = join([join($analytics_server_list, ':8086 '),':8086'],'')
@@ -172,7 +197,19 @@ class tripleo::network::contrail::database(
         },
       }
     }
-    $nodemgr_config = deep_merge($nodemgr_config_default, $nodemgr_config_ver_specific)
+    $nodemgr_config_sandesh = {
+      'SANDESH' => {
+        'introspect_ssl_enable' => $ssl_enabled,
+        'sandesh_ssl_enable'    => $ssl_enabled,
+        'sandesh_keyfile'       => $key_file,
+        'sandesh_certfile'      => $cert_file,
+        'sandesh_ca_cert'       => $ca_file,
+      },
+    }
+    $nodemgr_config = deep_merge(
+      deep_merge($nodemgr_config_default, $nodemgr_config_ver_specific),
+      $nodemgr_config_sandesh
+    )
     class {'::contrail::database':
       database_params => {
         'auth_host'               => $auth_host,
@@ -191,17 +228,5 @@ class tripleo::network::contrail::database(
         'database_nodemgr_config' => $nodemgr_config,
       }
     }
-  }
-  if $step >= 5 {
-    class {'::contrail::database::provision_database':
-      api_address                => $api_server,
-      api_port                   => $api_port,
-      database_node_address      => $host_ip,
-      database_node_name         => $host_name,
-      keystone_admin_user        => $admin_user,
-      keystone_admin_password    => $admin_password,
-      keystone_admin_tenant_name => $admin_tenant_name,
-      openstack_vip              => $auth_host,
-    }
-  }
+  } 
 }
