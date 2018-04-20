@@ -624,6 +624,9 @@ class tripleo::haproxy (
   $ceph_rgw_network            = hiera('ceph_rgw_network', undef),
   $cinder_network              = hiera('cinder_api_network', undef),
   $congress_network            = hiera('congress_api_network', undef),
+  $contrail_analytics_network  = hiera('contrail_analytics_network', undef),
+  $contrail_config_network     = hiera('contrail_config_network', undef),
+  $contrail_webui_network      = hiera('contrail_webui_network', undef),
   $docker_registry_network     = hiera('docker_registry_network', undef),
   $glance_api_network          = hiera('glance_api_network', undef),
   $gnocchi_network             = hiera('gnocchi_api_network', undef),
@@ -986,6 +989,7 @@ class tripleo::haproxy (
       public_ssl_port   => $ports[contrail_config_ssl_port],
       mode              => $contrail_config_mode,
       listen_options    => $contrail_config_listen_options,
+      service_network   => $contrail_config_network,
     }
   }
 
@@ -1013,6 +1017,7 @@ class tripleo::haproxy (
       ip_addresses      => hiera('contrail_analytics_node_ips', $::contrail_analytics_node_ips),
       server_names      => hiera('contrail_analytics_node_ips', $::contrail_analytics_node_ips),
       public_ssl_port   => $ports[contrail_analytics_ssl_port],
+      service_network   => $contrail_analytics_network,
     }
   }
 
@@ -1024,6 +1029,7 @@ class tripleo::haproxy (
       ip_addresses      => hiera('contrail_analytics_node_ips', $::contrail_analytics_node_ips),
       server_names      => hiera('contrail_analytics_node_ips', $::contrail_analytics_node_ips),
       public_ssl_port   => $ports[contrail_analytics_ssl_rest_port],
+      service_network   => $contrail_analytics_network,
     }
   }
 
@@ -1043,6 +1049,7 @@ class tripleo::haproxy (
       mode              => 'http',
       listen_options    => $contrail_webui_listen_options,
       member_options    => $contrail_webui_member_options,
+      service_network   => $contrail_webui_network,
     }
     if $service_certificate {
       $contrail_webui_https_mode = 'http'
@@ -1066,6 +1073,7 @@ class tripleo::haproxy (
       mode              => $contrail_webui_https_mode,
       listen_options    => $contrail_webui_https_listen_options,
       member_options    => $contrail_webui_https_member_options,
+      service_network   => $contrail_webui_network,
     }
   }
 
