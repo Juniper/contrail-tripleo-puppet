@@ -131,6 +131,7 @@ class tripleo::network::contrail::webui(
   $cassandra_server_list     = hiera('contrail_database_node_ips'),
   $contrail_analytics_vip    = hiera('contrail_analytics_vip', hiera('internal_api_virtual_ip')),
   $contrail_config_vip       = hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
+  $contrail_version          = hiera('contrail::contrail_version',4),
   $contrail_webui_http_port  = hiera('contrail::webui::http_port'),
   $contrail_webui_https_port = hiera('contrail::webui::https_port'),
   $neutron_vip               = hiera('internal_api_virtual_ip'),
@@ -144,6 +145,11 @@ class tripleo::network::contrail::webui(
   if $step >= 5 {
     # todo: it is actually is used as CA file for identity manager
     $cert_file_todo = undef
+    if $contrail_version < 4 {
+      $introspect_ssl_enable = false
+    } else {
+      $introspect_ssl_enable = $ssl_enabled
+    }
     class {'::contrail::webui':
       admin_user                => $admin_user,
       admin_password            => $admin_password,
@@ -161,6 +167,10 @@ class tripleo::network::contrail::webui(
       neutron_vip               => $neutron_vip,
       openstack_vip             => $auth_host,
       redis_ip                  => $redis_ip,
+      introspect_ssl_enable     => $introspect_ssl_enable,
+      sandesh_keyfile           => $key_file,
+      sandesh_certfile          => $cert_file,
+      sandesh_ca_cert           => $ca_file,
     }
   }
 }
