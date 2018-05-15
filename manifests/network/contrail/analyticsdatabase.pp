@@ -244,13 +244,14 @@ class tripleo::network::contrail::analyticsdatabase(
         },
       }
     }
-    $nodemgr_default = $analyticsdb_min_disk_gb ? {
-      undef   => {
+    if $analyticsdb_min_disk_gb == undef {
+      $nodemgr_default = {
         "${nodemgr_default_name}" => {
           'hostip'          => $host_ip,
         },
-      },
-      default => {
+      }
+    } else {
+      $nodemgr_default = {
         "${nodemgr_default_name}" => {
           'hostip'          => $host_ip,
           'minimum_diskGB'  => $analyticsdb_min_disk_gb,
