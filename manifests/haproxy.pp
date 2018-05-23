@@ -673,12 +673,9 @@ class tripleo::haproxy (
   if $contrail_config {
     $contrail_config_mode = 'http'
     $contrail_config_listen_options = {
-      'option'       => ['nolinger', 'forwardfor'],
-      'balance'      => 'roundrobin',
-      'cookie'       => 'SERVERID insert indirect nocache',
-      'http-request' => [
-            'set-header X-Forwarded-Proto https if { ssl_fc }',
-            'set-header X-Forwarded-Proto http if !{ ssl_fc }'],
+      'option'  => ['nolinger', 'forwardfor'],
+      'balance' => 'roundrobin',
+      'cookie'  => 'SERVERID insert indirect nocache',
     }
     ::tripleo::haproxy::endpoint { 'contrail_config':
       public_virtual_ip => $public_virtual_ip,
