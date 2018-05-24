@@ -137,8 +137,10 @@ class tripleo::network::contrail::webui(
     $cert_file_todo = undef
     if $contrail_version < 4 {
       $introspect_ssl_enable = false
+      $cnfg_auth_protocol = 'http'
     } else {
       $introspect_ssl_enable = $ssl_enabled
+      $cnfg_auth_protocol = $auth_protocol
     }
     class {'::contrail::webui':
       admin_user                => $admin_user,
@@ -158,6 +160,7 @@ class tripleo::network::contrail::webui(
       openstack_vip             => $auth_host,
       redis_ip                  => $redis_ip,
       introspect_ssl_enable     => $introspect_ssl_enable,
+      cnfg_auth_protocol        => $cnfg_auth_protocol,
       sandesh_keyfile           => $key_file,
       sandesh_certfile          => $cert_file,
       sandesh_ca_cert           => $ca_file,
