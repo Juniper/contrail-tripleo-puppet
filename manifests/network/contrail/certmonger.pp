@@ -122,7 +122,7 @@ countryName = US
 stateOrProvinceName = California
 localityName = Sannyvale
 0.organizationName = OpenContrail
-commonName = $host_ip
+commonName = $::hostname
 
 [ v3_req ]
 basicConstraints = CA:false
@@ -132,6 +132,7 @@ subjectAltName = @alt_names
 [ alt_names ]
 DNS.1 = $::fqdn
 DNS.2 = $::hostname
+IP.1 = $host_ip
 
 [ ca ]
 default_ca = CA_default
