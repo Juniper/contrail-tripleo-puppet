@@ -273,7 +273,7 @@ class tripleo::network::contrail::config(
   $keystone_project_domain_name = hiera('contrail::keystone_project_domain_name','Default'),
   $keystone_region              = hiera('contrail::keystone_region','regionOne'),
   $keystone_user_domain_name    = hiera('contrail::keystone_user_domain_name','Default'),
-  $memcached_servers            = hiera('contrail::memcached_server'),
+  $memcached_servers            = hiera('contrail::memcached_server', undef),
   $rabbit_server                = hiera('rabbitmq_node_ips'),
   $rabbit_user                  = hiera('contrail::rabbit_user'),
   $rabbit_password              = hiera('contrail::rabbit_password'),
@@ -340,7 +340,6 @@ class tripleo::network::contrail::config(
         'auth_protocol'     => $auth_protocol,
         'auth_url'          => $auth_url,
         'insecure'          => $insecure,
-        'memcached_servers' => $memcached_servers,
         'certfile'          => $cert_file,
         'keyfile'           => $key_file,
         'region_name'       => $keystone_region,
@@ -375,7 +374,6 @@ class tripleo::network::contrail::config(
         'auth_protocol'     => $auth_protocol,
         'auth_url'          => $auth_url,
         'insecure'          => $insecure,
-        'memcached_servers' => $memcached_servers,
         'region_name'       => $keystone_region,
       },
     }
@@ -388,7 +386,17 @@ class tripleo::network::contrail::config(
       },
     }
   }
-  $keystone_config = deep_merge($keystone_config_proto, $keystone_config_ver)
+  if $memcached_servers {
+    # contrail code use memcache_servers and set memcached_servers for middleware
+    $keystone_config_memcached = {
+       'KEYSTONE' => {
+          'memcache_servers'  => $memcached_servers,
+      },
+    }
+  } else {
+    $keystone_config_memcached = {}
+  }
+  $keystone_config = deep_merge(deep_merge($keystone_config_proto, $keystone_config_ver), $keystone_config_memcached)
   $sandesh_config = {
     'introspect_ssl_enable' => $ssl_enabled,
     'sandesh_ssl_enable'    => $ssl_enabled,

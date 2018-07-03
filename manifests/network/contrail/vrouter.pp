@@ -122,11 +122,6 @@
 #  String value.
 #  Defaults to hiera('contrail::insecure')
 #
-# [*memcached_servers*]
-#  (optional) memcached server ip
-#  String (IPv4) value.
-#  Defaults to hiera('contrail::memcached_server')
-#
 # [*metadata_secret*]
 #  (optional) secret for metadata
 #  String value.
@@ -191,7 +186,6 @@ class tripleo::network::contrail::vrouter (
   $keystone_project_domain_name = hiera('contrail::keystone_project_domain_name','Default'),
   $keystone_region              = hiera('contrail::keystone_region','regionOne'),
   $keystone_user_domain_name    = hiera('contrail::keystone_user_domain_name','Default'),
-  $memcached_servers            = hiera('contrail::memcached_server'),
   $metadata_secret              = hiera('contrail::vrouter::metadata_proxy_shared_secret'),
   $netmask                      = hiera('contrail::vrouter::netmask'),
   $physical_interface           = hiera('contrail::vrouter::physical_interface'),
@@ -256,7 +250,6 @@ class tripleo::network::contrail::vrouter (
       'auth_port'         => $auth_port,
       'auth_protocol'     => $auth_protocol,
       'auth_url'          => $auth_url,
-      'memcached_servers' => $memcached_servers,
       'region_name'       => $keystone_region,
     },
   }
@@ -319,7 +312,6 @@ class tripleo::network::contrail::vrouter (
     'sandesh_certfile'      => $cert_file,
     'sandesh_ca_cert'       => $ca_file,
   }
-
   if $contrail_version < 4 {
     $disco = {
       'port'   => $disc_server_port,
