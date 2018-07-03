@@ -973,23 +973,28 @@ class tripleo::haproxy (
     }
   }
 
+  $contrail_mode = 'http'
+  $contrail_listen_options = {
+    'option'        => 'forwardfor',
+    'balance'       => 'roundrobin',
+    'cookie'        => 'SERVERID insert indirect nocache',
+    'http-request'  => [
+      'set-header X-Forwarded-Proto https if { ssl_fc }',
+      'set-header X-Forwarded-Proto http if !{ ssl_fc }'],
+  }
+  $contrail_member_options = union($haproxy_member_options, ["cookie ${::hostname}"])
   if $contrail_config {
-    $contrail_config_mode = 'http'
-    $contrail_config_listen_options = {
-      'option'  => ['nolinger', 'forwardfor'],
-      'balance' => 'roundrobin',
-      'cookie'  => 'SERVERID insert indirect nocache',
-    }
     ::tripleo::haproxy::endpoint { 'contrail_config':
       public_virtual_ip => $public_virtual_ip,
       internal_ip       => hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
       service_port      => $ports[contrail_config_port],
       ip_addresses      => hiera('contrail_config_node_ips', $::contrail_config_node_ips),
-      server_names      => hiera('contrail_config_node_ips', $::contrail_config_node_ips),
+      server_names      => hiera('contrail_config_node_names', $::contrail_config_node_names),
       public_ssl_port   => $ports[contrail_config_ssl_port],
-      mode              => $contrail_config_mode,
-      listen_options    => $contrail_config_listen_options,
       service_network   => $contrail_config_network,
+      mode              => $contrail_mode,
+      listen_options    => $contrail_listen_options,
+      member_options    => $contrail_member_options,
     }
   }
 
@@ -1002,10 +1007,13 @@ class tripleo::haproxy (
       internal_ip                 => hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
       service_port                => $ports[contrail_discovery_port],
       ip_addresses                => hiera('contrail_config_node_ips', $::contrail_config_node_ips),
-      server_names                => hiera('contrail_config_node_ips', $::contrail_config_node_ips),
+      server_names                => hiera('contrail_config_node_names', $::contrail_config_node_names),
       public_ssl_port             => $ports[contrail_discovery_ssl_port],
       use_internal_certificates   => false,
       internal_certificates_specs => {},
+      mode                        => $contrail_mode,
+      listen_options              => $contrail_listen_options,
+      member_options              => $contrail_member_options,
     }
   }
 
@@ -1015,46 +1023,47 @@ class tripleo::haproxy (
       internal_ip       => hiera('contrail_analytics_vip', hiera('internal_api_virtual_ip')),
       service_port      => $ports[contrail_analytics_port],
       ip_addresses      => hiera('contrail_analytics_node_ips', $::contrail_analytics_node_ips),
-      server_names      => hiera('contrail_analytics_node_ips', $::contrail_analytics_node_ips),
+      server_names      => hiera('contrail_analytics_node_names', $::contrail_analytics_node_names),
       public_ssl_port   => $ports[contrail_analytics_ssl_port],
       service_network   => $contrail_analytics_network,
+      mode              => $contrail_mode,
+      listen_options    => $contrail_listen_options,
+      member_options    => $contrail_member_options,
     }
-  }
-
-  if $contrail_analytics {
     ::tripleo::haproxy::endpoint { 'contrail_analytics_rest':
       public_virtual_ip => $public_virtual_ip,
       internal_ip       => hiera('contrail_analytics_vip', hiera('internal_api_virtual_ip')),
       service_port      => $ports[contrail_analytics_rest_port],
       ip_addresses      => hiera('contrail_analytics_node_ips', $::contrail_analytics_node_ips),
-      server_names      => hiera('contrail_analytics_node_ips', $::contrail_analytics_node_ips),
+      server_names      => hiera('contrail_analytics_node_names', $::contrail_analytics_node_names),
       public_ssl_port   => $ports[contrail_analytics_ssl_rest_port],
       service_network   => $contrail_analytics_network,
+      mode              => $contrail_mode,
+      listen_options    => $contrail_listen_options,
+      member_options    => $contrail_member_options,
     }
   }
 
   if $contrail_webui {
-    $contrail_webui_listen_options = {
-      'balance'       => 'roundrobin',
-      'cookie'        => 'SERVERID insert indirect nocache',
-    }
-    $contrail_webui_member_options = union($haproxy_member_options, ["cookie ${::hostname}"])
     ::tripleo::haproxy::endpoint { 'contrail_webui_http':
-      public_virtual_ip => $public_virtual_ip,
-      internal_ip       => hiera('contrail_webui_vip', hiera('internal_api_virtual_ip')),
-      service_port      => $ports[contrail_webui_http_port],
-      ip_addresses      => hiera('contrail_config_node_ips', $::contrail_config_node_ips),
-      server_names      => hiera('contrail_config_node_names', $::contrail_config_node_names),
-      public_ssl_port   => $ports[contrail_webui_http_port],
-      mode              => 'http',
-      listen_options    => $contrail_webui_listen_options,
-      member_options    => $contrail_webui_member_options,
-      service_network   => $contrail_webui_network,
+      public_virtual_ip           => $public_virtual_ip,
+      internal_ip                 => hiera('contrail_webui_vip', hiera('internal_api_virtual_ip')),
+      service_port                => $ports[contrail_webui_http_port],
+      ip_addresses                => hiera('contrail_config_node_ips', $::contrail_config_node_ips),
+      server_names                => hiera('contrail_config_node_names', $::contrail_config_node_names),
+      public_ssl_port             => $ports[contrail_webui_http_port],
+      service_network             => $contrail_webui_network,
+      mode                        => 'http',
+      listen_options              => $contrail_listen_options,
+      member_options              => $contrail_member_options,
+      use_internal_certificates   => false,
+      internal_certificates_specs => {},
+      public_certificate          => undef,
     }
     if $service_certificate {
       $contrail_webui_https_mode = 'http'
-      $contrail_webui_https_listen_options = $contrail_webui_listen_options
-      $contrail_webui_https_member_options = union($contrail_webui_member_options, ['ssl verify none'])
+      $contrail_webui_https_listen_options = $contrail_listen_options
+      $contrail_webui_https_member_options = union($contrail_member_options, ['ssl verify none'])
     } else {
       $contrail_webui_https_mode = 'tcp'
       $contrail_webui_https_listen_options = {
