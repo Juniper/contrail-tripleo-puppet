@@ -76,12 +76,12 @@ class tripleo::network::contrail::heat(
 
 ) {
   if $ssl_enabled {
-    $use_ssl = 'False'
-  } else {
     $use_ssl = 'True'
+  } else {
+    $use_ssl = 'False'
   }
 
-  $plugin_dirs = '/usr/lib/python2.7/dist-packages/vnc_api/gen/heat/resources,/usr/lib/python2.7/site-packages/contrail_heat/resources'
+  $plugin_dirs = '/usr/lib/python2.7/site-packages/vnc_api/gen/heat/resources,/usr/lib/python2.7/site-packages/contrail_heat/resources'
 
   class {'::contrail::heat':
     heat_config            => {
