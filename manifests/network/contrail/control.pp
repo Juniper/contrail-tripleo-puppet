@@ -111,11 +111,6 @@
 #  (optional) insecure mode.
 #  Defaults to hiera('contrail::insecure'),
 #
-# [*memcached_servers*]
-#  (optional) IPv4 address of memcached servers
-#  String (IPv4) value + port
-#  Defaults to hiera('contrail::memcached_servers'),
-#
 # [*manage_named*]
 #  (optional) switch for managing named
 #  String
@@ -208,7 +203,6 @@ class tripleo::network::contrail::control(
   $ifmap_password        = hiera('contrail::control::host_ip'),
   $ifmap_username        = hiera('contrail::control::host_ip'),
   $insecure              = hiera('contrail::insecure'),
-  $memcached_servers     = hiera('contrail::memcached_server'),
   $internal_vip          = hiera('internal_api_virtual_ip'),
   $rabbit_server         = hiera('rabbitmq_node_ips'),
   $rabbit_user           = hiera('contrail::rabbit_user'),
