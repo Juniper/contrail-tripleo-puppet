@@ -29,11 +29,6 @@
 #  String value.
 #  Defaults to hiera('contrail::admin_tenant_name')
 #
-# [*admin_token*]
-#  (optional) admin token
-#  String value.
-#  Defaults to hiera('contrail::admin_token')
-#
 # [*admin_user*]
 #  (optional) admin user name.
 #  String value.
@@ -59,44 +54,57 @@
 #  Integer value.
 #  Defaults to hiera('step')
 #
-# [*contrail_ssl_enabled*]
+# [*contrail_api_ssl_enabled*]
 #  (optional) switch for ssl usage
 #  String value.
 #  Defaults to 'False'
 #
 class tripleo::network::contrail::heat(
   $step                   = Integer(hiera('step')),
-  $admin_password         = hiera('contrail::admin_password'),
-  $admin_token            = hiera('contrail::admin_token'),
-  $admin_user             = hiera('contrail::admin_user'),
-  $api_server             = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
-  $api_port               = 8082,
   $auth_host              = hiera('contrail::auth_host'),
-  $ssl_enabled            = hiera('contrail_ssl_enabled', false),
-
+  $auth_protocol          = hiera('contrail::auth_protocol'),
+  $admin_password         = hiera('contrail::admin_password'),
+  $admin_user             = hiera('contrail::admin_user'),
+  $admin_tenant_name      = hiera('contrail::admin_tenant_name'),
+  $api_server             = hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
+  $api_port               = hiera('contrail::api_port', '8082'),
+  $api_server_use_ssl     = hiera('contrail_internal_api_ssl', false),
+  $plugin_dirs            = hiera('contrail_heat_plugin_dirs', '/usr/lib/python2.7/site-packages/vnc_api/gen/heat/resources,/usr/lib/python2.7/site-packages/contrail_heat/resources')
 ) {
-  if $ssl_enabled {
+  if $api_server_use_ssl {
     $use_ssl = 'True'
   } else {
     $use_ssl = 'False'
   }
 
-  $plugin_dirs = '/usr/lib/python2.7/site-packages/vnc_api/gen/heat/resources,/usr/lib/python2.7/site-packages/contrail_heat/resources'
-
-  class {'::contrail::heat':
-    heat_config            => {
-      'DEFAULT'          => {
-        'plugin_dirs' => $plugin_dirs,
-      },
-      'clients_contrail' => {
-        'api_base_url' => '/',
-        'api_server'   => $api_server,
-        'api_port'     => $api_port,
-        'auth_host_ip' => $auth_host,
-        'user'         => $admin_user,
-        'password'     => $admin_password,
-        'use_ssl'      => $use_ssl,
-      },
+  $heat_config = {
+    'DEFAULT'          => {
+      'plugin_dirs' => $plugin_dirs,
+    },
+    'clients_contrail' => {
+      'api_base_url'  => '/',
+      'api_server'    => $api_server,
+      'api_port'      => $api_port,
+      'auth_host_ip'  => $auth_host,
+      'auth_protocol' => $auth_protocol,
+      'user'          => $admin_user,
+      'password'      => $admin_password,
+      'tenant'        => $admin_tenant_name,
+      'use_ssl'       => $use_ssl,
     },
   }
+
+  validate_hash($heat_config)
+
+  file { '/usr/lib/heat':
+    ensure => 'directory',
+  } ->
+  file { '/usr/lib/heat/contrail_heat':
+    ensure => 'link',
+    target => '/usr/lib/python2.7/site-packages/vnc_api/gen/heat',
+  }
+
+  $contrail_heat_config = { 'path' => '/etc/heat/heat.conf' }
+
+  create_ini_settings($heat_config, $contrail_heat_config)
 }
