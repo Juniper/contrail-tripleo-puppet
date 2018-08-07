@@ -69,17 +69,15 @@
 #  Defaults to empty hash.
 
 class tripleo::network::contrail::heat(
-  $step                              = Integer(hiera('step')),
-  $auth_host                         = hiera('contrail::auth_host'),
-  $auth_protocol                     = hiera('contrail::auth_protocol'),
-  $admin_password                    = hiera('contrail::admin_password'),
-  $admin_user                        = hiera('contrail::admin_user'),
-  $admin_tenant_name                 = hiera('contrail::admin_tenant_name'),
-  $api_server                        = hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
-  $api_port                          = hiera('contrail::api_port', '8082'),
-  $api_server_use_ssl                = hiera('contrail_internal_api_ssl', false),
-  $plugin_dirs                       = hiera('contrail_heat_plugin_dirs', '/usr/lib/python2.7/site-packages/vnc_api/gen/heat/resources,/usr/lib/python2.7/site-packages/contrail_heat/resources'),
-  $heat_config_extra                 = hiera('contrail_heat_config_extra', {}),
+  $step                   = Integer(hiera('step')),
+  $auth_host              = hiera('contrail::auth_host'),
+  $auth_protocol          = hiera('contrail::auth_protocol'),
+  $admin_password         = hiera('contrail::admin_password'),
+  $admin_user             = hiera('contrail::admin_user'),
+  $admin_tenant_name      = hiera('contrail::admin_tenant_name'),
+  $api_server             = hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
+  $api_port               = hiera('contrail::api_port', '8082'),
+  $api_server_use_ssl     = hiera('contrail_internal_api_ssl', false),
 ) {
   if $api_server_use_ssl {
     $use_ssl = 'True'
@@ -87,10 +85,7 @@ class tripleo::network::contrail::heat(
     $use_ssl = 'False'
   }
 
-  $contrail_config = {
-    'DEFAULT'          => {
-      'plugin_dirs' => $plugin_dirs,
-    },
+  $heat_config = {
     'clients_contrail' => {
       'api_base_url'  => '/',
       'api_server'    => $api_server,
@@ -107,16 +102,6 @@ class tripleo::network::contrail::heat(
   $heat_config = deep_merge($heat_config_extra, $contrail_config)
 
   validate_hash($heat_config)
-
-  file { '/usr/lib/heat':
-    ensure => 'directory',
-  } ->
-  file { '/usr/lib/heat/contrail_heat':
-    ensure => 'link',
-    target => '/usr/lib/python2.7/site-packages/vnc_api/gen/heat',
-  }
-
   $contrail_heat_config = { 'path' => '/etc/heat/heat.conf' }
-
   create_ini_settings($heat_config, $contrail_heat_config)
 }
