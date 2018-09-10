@@ -283,6 +283,7 @@ class tripleo::network::contrail::config(
   $disc_server_ip               = hiera('contrail_config_vip',hiera('internal_api_virtual_ip')),
   $disc_server_port             = hiera('contrail::disc_server_port'),
   $host_ip                      = hiera('contrail::config::host_ip'),
+  $global_read_only_role        = hiera('contrail::config::global_read_only_role', undef),
   $ifmap_password               = hiera('contrail::config::ifmap_password',false),
   $ifmap_server_ip              = hiera('contrail::config::host_ip'),
   $ifmap_username               = hiera('contrail::config::ifmap_username',false),
@@ -444,6 +445,16 @@ class tripleo::network::contrail::config(
     }
   }
   if $step >= 3 {
+    if $global_read_only_role {
+      $rbac_opts = {
+        'aaa_mode'              => $aaa_mode,
+        'global_read_only_role' => $global_read_only_role,
+      }
+    } else {
+      $rbac_opts = {
+        'aaa_mode'              => $aaa_mode,
+      }
+    }
     if $contrail_version == 3 {
       if $rabbit_use_ssl {
         $rabbit_config = {
@@ -455,7 +466,6 @@ class tripleo::network::contrail::config(
         $rabbit_config = {}
       }
       $api_config_default_common =  {
-        'aaa_mode'              => $aaa_mode,
         'auth'                  => $auth,
         'cassandra_server_list' => $cassandra_server_list_9160,
         'disc_server_ip'        => $disc_server_ip,
@@ -472,7 +482,7 @@ class tripleo::network::contrail::config(
         'redis_server'          => $redis_server,
         'zk_server_ip'          => $zk_server_ip_2181,
       }
-      $api_config_default = deep_merge($api_config_default_common, $rabbit_config)
+      $api_config_default = deep_merge(deep_merge($api_config_default_common, $rabbit_config), $rbac_opts)
       $device_manager_config_default_common =  {
         'api_server_ip'         => $api_server,
         'api_server_port'       => $api_port,
@@ -571,7 +581,6 @@ class tripleo::network::contrail::config(
         $rabbit_config = {}
       }
       $api_config_default_common =  {
-        'aaa_mode'              => $aaa_mode,
         'auth'                  => $auth,
         'cassandra_server_list' => $cassandra_server_list_9160,
         'collectors'            => $collector_server_list_8086,
@@ -584,7 +593,7 @@ class tripleo::network::contrail::config(
         'redis_server'          => $redis_server,
         'zk_server_ip'          => $zk_server_ip_2181,
       }
-      $api_config_default = deep_merge($api_config_default_common, $rabbit_config)
+      $api_config_default = deep_merge(deep_merge($api_config_default_common, $rabbit_config), $rbac_opts)
       $device_manager_config_default_common =  {
         'api_server_ip'         => $api_server,
         'api_server_port'       => $api_port,
