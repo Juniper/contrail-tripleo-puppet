@@ -259,19 +259,23 @@ class tripleo::network::contrail::vrouter (
     $control_server_list_53 = join([join($control_node_ips, ':53 '),':53'],'')
     $control_server_list_5269 = join([join($control_node_ips, ':5269 '),':5269'],'')
   }
-
+  $keystone_no_auth_token = {
+    'KEYSTONE' => {
+      'admin_token' => { 'ensure' => absent },
+    }
+  }
   if $auth_version == 2 {
-    $keystone_config_ver = {}
+    $keystone_config_ver = $keystone_no_auth_token
     $auth_url_suffix = 'v2.0'
     $vnc_authn_url = '/v2.0/tokens'
   } else {
-    $keystone_config_ver = {
+    $keystone_config_ver = deep_merge($keystone_no_auth_token, {
       'KEYSTONE' => {
         'auth_type'               => $keystone_auth_type,
         'project_domain_name'     => $keystone_project_domain_name,
         'user_domain_name'        => $keystone_user_domain_name,
       },
-    }
+    })
     $auth_url_suffix = 'v3'
     $vnc_authn_url = '/v3/auth/tokens'
   }

@@ -295,16 +295,19 @@ class tripleo::network::contrail::analytics(
   $redis_config = "bind ${host_ip} 127.0.0.1"
   $zk_server_ip_2181 = join([join($zk_server_ip, ':2181 '),':2181'],'')
   $zk_server_ip_2181_comma = join([join($zk_server_ip, ':2181,'),':2181'],'')
+  $keystone_no_auth_token = {
+    'admin_token' => { 'ensure' => absent },
+  }
   if $auth_version == 2 {
-    $keystone_config_ver = {}
+    $keystone_config_ver = $keystone_no_auth_token
     $auth_url_suffix = 'v2.0'
     $vnc_authn_url = '/v2.0/tokens'
   } else {
-    $keystone_config_ver = {
+    $keystone_config_ver = deep_merge($keystone_no_auth_token, {
       'auth_type'               => $keystone_auth_type,
       'project_domain_name'     => $keystone_project_domain_name,
       'user_domain_name'        => $keystone_user_domain_name,
-    }
+    })
     $auth_url_suffix = 'v3'
     $vnc_authn_url = '/v3/auth/tokens'
   }
