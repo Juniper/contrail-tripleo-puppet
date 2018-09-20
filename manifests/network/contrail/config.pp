@@ -296,18 +296,23 @@ class tripleo::network::contrail::config(
   $rabbit_server_list_5672 = join([join($rabbit_server, ':5672,'),':5672'],'')
   $zk_server_ip_2181 = join([join($zk_server_ip, ':2181,'),':2181'],'')
   $analytics_server_list_8081 = join([join($analytics_server_list, ':8081 '),':8081'],'')
+  $keystone_no_auth_token = {
+    'KEYSTONE' => {
+      'admin_token' => { 'ensure' => absent },
+    }
+  }
   if $auth_version == 2 {
-    $keystone_config_ver = {}
+    $keystone_config_ver = $keystone_no_auth_token
     $auth_url_suffix = 'v2.0'
     $vnc_authn_url = '/v2.0/tokens'
   } else {
-    $keystone_config_ver = {
+    $keystone_config_ver = deep_merge($keystone_no_auth_token, {
       'KEYSTONE' => {
         'auth_type'               => $keystone_auth_type,
         'project_domain_name'     => $keystone_project_domain_name,
         'user_domain_name'        => $keystone_user_domain_name,
       },
-    }
+    })
     $auth_url_suffix = 'v3'
     $vnc_authn_url = '/v3/auth/tokens'
   }
