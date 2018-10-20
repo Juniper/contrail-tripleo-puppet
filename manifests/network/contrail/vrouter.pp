@@ -196,6 +196,7 @@ class tripleo::network::contrail::vrouter (
   $is_dpdk                      = hiera('contrail::vrouter::is_dpdk',false),
   $dpdk_driver                  = hiera('contrail::vrouter::dpdk_driver',false),
   $sriov_on                     = hiera('contrail::vrouter::sriov_on', false),
+  $vhost_user_mode              = hiera('contrail::vrouter::vhost_user_mode', ''),
 ) {
   $cidr = netmask_to_cidr($netmask)
   $vrouter_analytics_server_list = hiera('contrail::vrouter::analytics_node_ips', [])
@@ -506,6 +507,7 @@ class tripleo::network::contrail::vrouter (
       keystone_admin_tenant_name => $admin_tenant_name,
       is_tsn                     => $is_tsn,
       is_dpdk                    => $is_dpdk,
+      vhost_user_mode            => $vhost_user_mode,
     }
   }
 }
