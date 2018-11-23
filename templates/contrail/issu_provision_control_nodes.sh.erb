@@ -1,0 +1,59 @@
+#!/bin/bash -x
+
+config_api_image=`docker ps | awk '/config_api/{print $1}' | head`
+
+new_api_server_ip=<%= @host_ip -%>
+
+AUTH_PARAMS="--admin_password <%= @admin_password -%>"
+AUTH_PARAMS+=" --admin_tenant_name <%= @admin_tenant_name -%>"
+AUTH_PARAMS+=" --admin_user <%= @admin_user -%>"
+
+asn_opts="--router_asn <%= @router_asn -%>"
+bgp_auto_mesh_opts=''
+<% if @ibgp_auto_mesh -%>
+bgp_auto_mesh_opts="--ibgp_auto_mesh"
+<% end -%>
+
+function resolve_short_name() {
+    # puppet use $::hostname for node provisioning which is a short name
+    resolveip -s $ip | cut -d '.' -f 1
+}
+
+function proviosion_control(){
+  local ip=$1
+  local api=$2
+  local port=$3
+  local name=$(resolve_short_name $ip)
+  docker exec -it $config_api_image /bin/bash -c "LOG_LEVEL=SYS_NOTICE source /common.sh ; python /opt/contrail/utils/provision_control.py --host_name $name --host_ip $ip --api_server_ip $api --api_server_port $port --oper add $asn_opts $bgp_auto_mesh_opts $AUTH_PARAMS"
+}
+
+#Pair old control nodes in new cluster (call on issu node).
+for ip in <%= control_server_list_space -%> ; do
+  proviosion_control $ip $new_api_server_ip 8082
+done
+
+#Pair new control nodes in old cluster with similar command (call on old contrail controller node)
+for ip in <%= @issu_ips_list_space -%> ; do
+  proviosion_control $ip <%= api_server -%> <%%= @api_port -%>
+done
+
+Stop containers:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
+for i in $(docker ps |grep 'config_devicemgr\|config_schema\|config_svcmonitor' | awk '{print($1)}') ; do
+  docker stop $i
+done
+
+cat /dev/zero | ssh-keygen -q -N “"
+cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
+chmod 644 /root/.ssh/authorized_keys
+
+docker run --rm -it --network host \
+   -v /etc/contrail/contrail-issu.conf:/etc/contrail/contrail-issu.conf \
+   --entrypoint /bin/bash -v /root/.ssh:/root/.ssh $config_api_image \
+   -c "/usr/bin/contrail-issu-pre-sync -c /etc/contrail/contrail-issu.conf"
+
+if [[ $? == 0 ]] ; then
+    docker run --rm --detach -it --network host \
+    -v /etc/contrail/contrail-issu.conf:/etc/contrail/contrail-issu.conf \
+    --entrypoint /bin/bash -v /root/.ssh:/root/.ssh --name issu-run-sync $config_api_image \
+    -c "/usr/bin/contrail-issu-run-sync -c /etc/contrail/contrail-issu.conf"
+fi
