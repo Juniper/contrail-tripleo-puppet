@@ -1,0 +1,13 @@
+instances:
+<% if @compute_nodes != [] -%>
+<% @compute_nodes.each do |node| %>
+  <%= node.name %>:
+    ip: node.ip
+    provider: bms
+    roles:
+      vrouter:
+        MAINTENANCE_MODE: TRUE
+        VROUTER_ENCRYPTION: FALSE
+      openstack_compute_legacy: null
+<% end -%>
+<% end -%>
