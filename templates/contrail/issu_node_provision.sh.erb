@@ -1,0 +1,85 @@
+#!/bin/bash -x
+
+new_api_server_ip=${new_api_server_ip:-<%= @host_ip %>}
+new_api_server_port=${new_api_server_port:-8082}
+
+old_api_server_ip=${old_api_server_ip:-<%= @api_server %>}
+old_api_server_port=${old_api_server_port:-<%= @api_port %>}
+
+old_control_servers_list_space="${old_control_servers_list_space:-<%= @old_control_servers_list_space %>}"
+issu_ips_list_space="${issu_ips_list_space:-<%= @issu_ips_list_space %>}"
+
+admin_password=${admin_password:-<%= @admin_password %>}
+admin_tenant_name=${admin_tenant_name:-<%= @admin_tenant_name %>}
+admin_user=${admin_user:-<%= @admin_user %>}
+
+router_asn=${router_asn:-<%= @router_asn %>}
+
+ibgp_auto_mesh=${ibgp_auto_mesh:-<%= @ibgp_auto_mesh %>}
+
+config_api_container_id=${config_api_container_id:-`sudo docker ps | awk '/config_api/{print $1}' | head`}
+
+AUTH_PARAMS="--admin_password $admin_password"
+AUTH_PARAMS+=" --admin_tenant_name $admin_tenant_name"
+AUTH_PARAMS+=" --admin_user $admin_user"
+
+asn_opts="--router_asn $router_asn"
+
+bgp_auto_mesh_opts=''
+if [[ ${ibgp_auto_mesh,,} == 'true' ]] ; then
+  bgp_auto_mesh_opts="--ibgp_auto_mesh"
+fi
+
+working_dir=${working_dir:-'/tmp/contrail_issu'}
+mkdir -p "$working_dir"
+
+function resolve_short_name() {
+    # puppet use $::hostname for node provisioning which is a short name
+    resolveip -s $ip | cut -d '.' -f 1
+}
+
+function proviosion_control(){
+  local ip=$1
+  local api=$2
+  local port=$3
+  local name=$(resolve_short_name $ip)
+
+  cat << EOF > ${working_dir}/provision_issu.sh
+#!/bin/bash -x
+LOG_LEVEL=SYS_NOTICE
+source /common.sh
+set_third_party_auth_config
+set_vnc_api_lib_ini
+python /opt/contrail/utils/provision_control.py --host_name $name \
+  --host_ip $ip \
+  --api_server_ip $api \
+  --api_server_port $port \
+  --oper add \
+  $asn_opts $bgp_auto_mesh_opts $AUTH_PARAMS
+EOF
+  chmod +x ${working_dir}/provision_issu.sh
+  sudo docker cp ${working_dir}/provision_issu.sh ${config_api_container_id}:/
+  sudo docker exec -it $config_api_container_id /provision_issu.sh
+}
+
+ret=0
+#Pair old control nodes in new cluster (call on issu node).
+for ip in $old_control_servers_list_space ; do
+  proviosion_control $ip $new_api_server_ip $new_api_server_port || {
+    echo "ERROR: failed to provision old control node $ip in ISSU cluster"
+    exit -1
+  }
+done
+
+#Pair new control nodes in old cluster with similar command (call on old contrail controller node)
+for ip in $issu_ips_list_space ; do
+  proviosion_control $ip $old_api_server_ip $old_api_server_port  || {
+    echo "ERROR: failed to provision ISSU control node $ip in old cluster $old_api_server_ip:$old_api_server_port"
+    exit -1
+  }
+done
+
+#Stop containers:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
+for i in $(sudo docker ps |grep 'config_devicemgr\|config_schema\|config_svcmonitor' | awk '{print($1)}') ; do
+  sudo docker stop $i
+done
