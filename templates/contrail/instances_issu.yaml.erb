@@ -1,0 +1,15 @@
+
+<% if @issu_instances != [] -%>
+<% @issu_instances.keys.sort.each do |name| %>
+  <%= name %>:
+    ip: <%= issu_instances[name] %>
+    provider: bms
+    roles:
+      analytics: null
+      analytics_database: null
+      config: null
+      config_database: null
+      control: null
+      webui: null
+<% end -%>
+<% end -%>
