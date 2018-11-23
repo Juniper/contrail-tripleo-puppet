@@ -1,0 +1,14 @@
+
+instances:
+<% if @compute_instances != [] -%>
+<% @compute_instances.keys.sort.each do |name| %>
+  <%= name %>:
+    ip: <%= compute_instances[name] %>
+    provider: bms
+    roles:
+      vrouter:
+        MAINTENANCE_MODE: TRUE
+        VROUTER_ENCRYPTION: FALSE
+      openstack_compute_legacy: null
+<% end -%>
+<% end -%>
