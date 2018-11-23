@@ -1,0 +1,81 @@
+
+#!/bin/bash -x
+
+new_api_server_ip=${new_api_server_ip:-<%= @host_ip %>}
+new_api_server_port=${new_api_server_port:-8082}
+
+old_api_server_ip=${old_api_server_ip:-<%= @api_server %>}
+old_api_server_port=${old_api_server_port:-<%= @api_port %>}
+
+old_control_servers_list_space="${old_control_servers_list_space:-<%= @control_servers_list_space %>}"
+issu_ips_list_space="${issu_ips_list_space:-<%= @issu_ips_list_space %>}"
+
+admin_password=${admin_password:-<%= @admin_password %>}
+admin_tenant_name=${admin_tenant_name:-<%= @admin_tenant_name %>}
+admin_user=${admin_user:-<%= @admin_user %>}
+
+router_asn=${router_asn:-<%= @router_asn %>}
+
+ibgp_auto_mesh=${ibgp_auto_mesh:-<%= @ibgp_auto_mesh %>}
+
+container_registry=${container_registry:-<%= @container_registry %>}
+container_tag=${container_tag:-<%= @container_tag %>}
+config_api_image=${ansible_deployer_image:-"${container_registry}/contrail-controller-config-api:${container_tag}"}
+
+issu_config=${issu_config:-'issu.conf'}
+issu_config_file=$(echo "$issu_config" | awk -F '/' '{print($NF)}')
+
+AUTH_PARAMS="--admin_password $admin_password"
+AUTH_PARAMS+=" --admin_tenant_name $admin_tenant_name"
+AUTH_PARAMS+=" --admin_user $admin_user"
+
+asn_opts="--router_asn $router_asn"
+
+bgp_auto_mesh_opts=''
+if [[ ${ibgp_auto_mesh,,} == 'true' ]] ; then
+  bgp_auto_mesh_opts="--ibgp_auto_mesh"
+fi
+
+host_ssh_dir=${host_ssh_dir:-"$(pwd)/.ssh"}
+
+working_dir=${working_dir:-'/tmp/contrail_issu'}
+ssh_dir="$working_dir/ssh"
+
+cp -f "$issu_config" "${working_dir}/"
+
+cat << EOF > ${working_dir}/entrypoint.sh
+#!/bin/bash -x
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+cp ${ssh_dir}/* ~/.ssh/
+chown -R root:root ~/.ssh
+/usr/bin/contrail-issu-pre-sync -c $working_dir/$issu_config_file
+EOF
+chmod +x ${working_dir}/entrypoint.sh
+
+sudo docker run --rm -it --network host \
+  -v "$working_dir":"$working_dir":rd \
+  -v "$host_ssh_dir":"$ssh_dir":rd \
+  --entrypoint ${working_dir}/entrypoint.sh \
+  $config_api_image 
+
+if [[ $? != 0 ]] ; then
+  echo "ERROR: failed to run issu pre-sync"
+  exit -1
+fi
+
+cat << EOF > ${working_dir}/entrypoint.sh
+#!/bin/bash -x
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+cp ${ssh_dir}/* ~/.ssh/
+chown -R root:root ~/.ssh
+/usr/bin/contrail-issu-run-sync -c $working_dir/$issu_config_file
+EOF
+chmod +x ${working_dir}/entrypoint.sh
+
+sudo docker run --rm --detach -it --network host --name issu-run-sync \
+  -v "$working_dir":"$working_dir":rd \
+  -v "$host_ssh_dir":"$ssh_dir":rd \
+  --entrypoint ${working_dir}/entrypoint.sh \
+  $config_api_image 
