@@ -1,0 +1,42 @@
+#!/bin/bash -x
+
+container_registry=${container_registry:-<%= @container_registry %>}
+container_tag=${container_tag:-<%= @container_tag %>}
+ansible_deployer_image=${ansible_deployer_image:-"${container_registry}/contrail-kolla-ansible-deployer:${container_tag}"}
+
+instances_yaml=${instances_yaml:-'instances_issu.yaml'}
+working_dir=${working_dir:-'/tmp/contrail_issu'}
+ssh_dir="$working_dir/ssh"
+
+mkdir -p "$working_dir"
+mkdir -p "$ssh_dir"
+
+cp -f "$instances_yaml" "${working_dir}/instances.yaml"
+
+cat << EOF > ${working_dir}/container_hosts.yml
+ansible_python_interpreter: /opt/rh/python27/root/usr/bin/python2.7
+EOF
+
+cat << EOF > ${working_dir}/entrypoint.sh
+#!/bin/bash -x
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+cp ${ssh_dir}/* ~/.ssh/
+chown -R root:root ~/.ssh
+cd /root/contrail-ansible-deployer;
+mkdir -p inventory/group_vars
+cp -f ${working_dir}/instances.yaml config/
+cp -f ${working_dir}/container_hosts.yml inventory/group_vars/container_hosts.yml
+ansible-playbook -v -e orchestrator=openstack -i inventory/ playbooks/install_contrail.yml
+EOF
+chmod +x ${working_dir}/entrypoint.sh
+
+docker run --rm -it --network host \
+  -v "$working_dir":"$working_dir" \
+  --entrypoint ${working_dir}/entrypoint.sh \
+  $ansible_deployer_image
+
+if [[ $? != 0 ]] ; then
+  echo "ERROR: failed to run deploy issu Contrail Controller node"
+  exit -1
+fi
