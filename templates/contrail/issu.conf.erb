@@ -1,0 +1,35 @@
+[DEFAULTS]
+######
+# old cluster parameters
+######
+old_rabbit_user = <%= @rabbit_user %>
+old_rabbit_password = <%= @rabbit_password %>
+old_rabbit_q_name = vnc-config.issu-queue
+old_rabbit_vhost = /
+old_rabbit_port = <%= @rabbit_port %>
+old_rabbit_address_list = <%= @old_rabbit_server_list_5672 %>
+
+old_cassandra_user = ''
+old_cassandra_password = ''
+old_cassandra_address_list = <%= @old_cassandra_server_list_9160 %>
+
+old_zookeeper_address_list = <%= @old_zk_server_ip_2181 %>
+
+######
+# issu cluster parameters
+######
+# details about new rabbit
+# new_rabbit_user = rabbitmq
+# new_rabbit_password = password
+# new_rabbit_ha_mode =
+new_rabbit_q_name = vnc-config.issu-queue
+new_rabbit_vhost = /
+new_rabbit_port = 5673
+new_rabbit_address_list = <%= @host_ip %>
+
+new_cassandra_address_list = <%= @host_ip -%>:9161
+
+new_zookeeper_address_list = <%= @host_ip -%>:2181
+
+# details about new controller nodes
+new_api_info = {"<%= @host_ip -%>": [("root"), ("")]}
