@@ -62,10 +62,15 @@ class tripleo::network::contrail::issu(
   $old_zk_server_ip_2181 = join([join($zk_server_ip, ':2181,'),':2181'],'')
   $old_rabbit_server_list_5672 = join([join($rabbit_server, ':5672,'),':5672'],'')
   $old_rabbit_server_list = join($rabbit_server, ',')
+  # at revert step old should point to Contrail Config Database 
+  # because 5.x Contrail has own rabbit
+  $revert_issu_old_rabbit_server_list = join($zk_server_ip, ',')
   
+
   $issu_api_info = "{\"${host_ip}\": [(\"${issu_ssh_user}\"), (\"\")]}"
   $revert_issu_api_info = join(['{"', join([join($old_config_servers, "\": [(\"${issu_ssh_user}\"), (\"\")],\"", ''), "\": [(\"${issu_ssh_user}\"), (\"\")]}"], '')], '')
 
+  $first_old_config_server_ip = ${old_config_servers[0]}
   $old_config_servers_list_space = join($old_config_servers, ' ')
   $old_control_servers_list_space = join($old_control_servers, ' ')
 
@@ -110,9 +115,9 @@ class tripleo::network::contrail::issu(
     content => template('tripleo/contrail/issu_node_deploy.sh.erb'),
     mode    => 755,
   } ->
-  file { "${issu_dir}/issu_node_provision.sh" :
+  file { "${issu_dir}/issu_node_pair.sh" :
     ensure  => file,
-    content => template('tripleo/contrail/issu_node_provision.sh.erb'),
+    content => template('tripleo/contrail/issu_node_pair.sh.erb'),
     mode    => 755,
   } ->
   file { "${issu_dir}/issu_node_sync.sh" :

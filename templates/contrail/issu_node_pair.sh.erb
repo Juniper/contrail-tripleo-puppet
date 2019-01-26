@@ -1,5 +1,8 @@
 #!/bin/bash -x
 
+oper=${1:-'add'}
+step=${2:-'pair_with_old'}
+
 new_api_server_ip=${new_api_server_ip:-<%= @host_ip %>}
 new_api_server_port=${new_api_server_port:-8082}
 
@@ -42,7 +45,20 @@ function proviosion_control(){
   local ip=$1
   local api=$2
   local port=$3
+  local use_old_script=$4
   local name=$(resolve_short_name $ip)
+
+  if [[ -n "$use_old_script" ]] ; then
+    cat << EOF | ssh -i ~/.ssh/issu_id_rsa heat-admin@${api}
+sudo python /opt/contrail/utils/provision_control.py --host_name $name \
+  --host_ip $ip \
+  --api_server_ip $api \
+  --api_server_port $port \
+  --oper $oper \
+  $asn_opts $bgp_auto_mesh_opts $AUTH_PARAMS
+EOF
+    return $?
+  fi
 
   cat << EOF > ${working_dir}/provision_issu.sh
 #!/bin/bash -x
@@ -54,7 +70,7 @@ python /opt/contrail/utils/provision_control.py --host_name $name \
   --host_ip $ip \
   --api_server_ip $api \
   --api_server_port $port \
-  --oper add \
+  --oper $oper \
   $asn_opts $bgp_auto_mesh_opts $AUTH_PARAMS
 EOF
   chmod +x ${working_dir}/provision_issu.sh
@@ -72,14 +88,18 @@ for ip in $old_control_servers_list_space ; do
 done
 
 #Pair new control nodes in old cluster with similar command (call on old contrail controller node)
+use_old_script='true'
+[[ "$step"  != 'pair_with_old' ] && use_old_script=''
 for ip in $issu_ips_list_space ; do
-  proviosion_control $ip $old_api_server_ip $old_api_server_port  || {
+  proviosion_control $ip $old_api_server_ip $old_api_server_port $use_old_script || {
     echo "ERROR: failed to provision ISSU control node $ip in old cluster $old_api_server_ip:$old_api_server_port"
     exit -1
   }
 done
 
-#Stop containers:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
-for i in $(sudo docker ps |grep 'config_devicemgr\|config_schema\|config_svcmonitor' | awk '{print($1)}') ; do
-  sudo docker stop $i
+if [[ "$oper" == 'add' && "$step" == 'pair_with_old' ]] ; then
+  #Stop containers:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
+  for i in $(sudo docker ps |grep 'config_devicemgr\|config_schema\|config_svcmonitor' | awk '{print($1)}') ; do
+    sudo docker stop $i
+  done
 done

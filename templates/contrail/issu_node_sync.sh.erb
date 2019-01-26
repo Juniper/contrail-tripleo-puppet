@@ -20,7 +20,8 @@ cat << EOF > ${working_dir}/entrypoint.sh
 #!/bin/bash -x
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
-cp $working_dir/ssh/* ~/.ssh/
+cp -f "$working_dir/ssh/issu_id_rsa" ~/.ssh/id_rsa
+cp -f "$working_dir/ssh/issu_id_rsa.pub" ~/.ssh/id_rsa.pub
 chown -R root:root ~/.ssh
 /usr/bin/contrail-issu-pre-sync -c $working_dir/$issu_config_file
 EOF
@@ -41,7 +42,8 @@ cat << EOF > ${working_dir}/entrypoint.sh
 #!/bin/bash -x
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
-cp $working_dir/ssh/* ~/.ssh/
+cp -f "$working_dir/ssh/issu_id_rsa" ~/.ssh/id_rsa
+cp -f "$working_dir/ssh/issu_id_rsa.pub" ~/.ssh/id_rsa.pub
 chown -R root:root ~/.ssh
 /usr/bin/contrail-issu-run-sync -c $working_dir/$issu_config_file
 EOF
