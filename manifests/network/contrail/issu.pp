@@ -70,7 +70,7 @@ class tripleo::network::contrail::issu(
   $issu_api_info = "{\"${host_ip}\": [(\"${issu_ssh_user}\"), (\"\")]}"
   $revert_issu_api_info = join(['{"', join([join($old_config_servers, "\": [(\"${issu_ssh_user}\"), (\"\")],\"", ''), "\": [(\"${issu_ssh_user}\"), (\"\")]}"], '')], '')
 
-  $first_old_config_server_ip = ${old_config_servers[0]}
+  $first_old_config_server_ip = $old_config_servers[0]
   $old_config_servers_list_space = join($old_config_servers, ' ')
   $old_control_servers_list_space = join($old_control_servers, ' ')
 
