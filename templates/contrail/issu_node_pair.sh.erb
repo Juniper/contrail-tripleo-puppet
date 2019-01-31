@@ -37,6 +37,7 @@ working_dir=${working_dir:-'/tmp/contrail_issu'}
 mkdir -p "$working_dir"
 
 function resolve_short_name() {
+    local ip=$1
     # puppet use $::hostname for node provisioning which is a short name
     resolveip -s $ip | cut -d '.' -f 1
 }

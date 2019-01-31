@@ -1,5 +1,29 @@
 #!/bin/bash -x
 
+api_server=${api_server:-<%= @api_server %>}
+api_port=${api_port:-<%= @api_port %>}
+host_ip=${host_ip:-<%= @host_ip %>}
+internal_api_ssl=${internal_api_ssl:-<%= @internal_api_ssl %>}
+vhost_user_mode=${vhost_user_mode:-<%= @vhost_user_mode %>}
+is_dpdk=${is_dpdk:-<%= @is_dpdk %>}
+admin_password=${admin_password:-<%= @admin_password %>}
+admin_tenant_name=${admin_tenant_name:-<%= @admin_tenant_name %>}
+admin_user=${admin_user:-<%= @admin_user %>}
+
+AUTH_PARAMS="--admin_password $admin_password"
+AUTH_PARAMS+=" --admin_tenant $admin_tenant_name"
+AUTH_PARAMS+=" --admin_user $admin_user"
+
+vhost_user_mode_opts=''
+if [[ -n "$vhost_user_mode"  ]] ; then
+  vhost_user_mode_opts="--virtual_router_vhost_user_mode ${vhost_user_mode}"
+fi
+
+dpdk_opts=''
+if [[ "${is_dpdk,,}" == 'true' ]] ; then
+  dpdk_opts='--dpdk_enabled'
+fi
+
 container_registry=${container_registry:-<%= @container_registry %>}
 container_tag=${container_tag:-<%= @container_tag %>}
 ansible_deployer_image=${ansible_deployer_image:-"${container_registry}/contrail-kolla-ansible-deployer:${container_tag}"}
@@ -37,6 +61,29 @@ chmod +x ${working_dir}/entrypoint.sh
 
 sudo systemctl stop supervisor-vrouter
 sudo systemctl disable supervisor-vrouter
+
+function provision_vrouter() {
+  local name=$1
+  local oper=$2
+  sudo python /opt/contrail/utils/provision_vrouter.py \
+    --oper $oper
+    --host_name $name \
+    --host_ip ${host_ip} \
+    --api_server_ip ${api_server} \
+    --api_server_port ${api_port} \
+    --api_server_use_ssl ${internal_api_ssl} \
+    $AUTH_PARAMS \
+    $vhost_user_mode_opts \
+    $dpdk_opts
+}
+
+#Reprovision with fqdn
+old_name=$(uname -n)
+new_name=$(resolveip -s $host_ip)
+if [[ "$old_name" != "$new_name" ]] ; then
+  provision_vrouter $old_name del
+  provision_vrouter $new_name add
+fi
 
 sudo docker run --rm -it --network host --name issu_deploy \
   -v "$working_dir":"$working_dir" \

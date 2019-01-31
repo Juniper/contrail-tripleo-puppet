@@ -13,19 +13,23 @@ class tripleo::network::contrail::issu_compute(
   $admin_password               = hiera('contrail::admin_password'),
   $api_server                   = hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
   $api_port                     = 8082,
+  $internal_api_ssl             = hiera('contrail_internal_api_ssl', false),
   $container_registry           = hiera('contrail_issu_container_registry'),
   $container_tag                = hiera('contrail_issu_container_tag'),
   $old_control_servers          = hiera('contrail::vrouter::control_node_ips', hiera('contrail_control_node_ips')),
   $host_ip                      = hiera('contrail_issu_host_ip'),
   $ibgp_auto_mesh               = true,
   $issu_ips                     = hiera('contrail_issu_node_ips'),
+  $is_dpdk                      = hiera('contrail::vrouter::is_dpdk',false),
   $keystone_project_domain_name = hiera('contrail::keystone_project_domain_name','Default'),
   $keystone_region              = hiera('contrail::keystone_region','regionOne'),
   $keystone_user_domain_name    = hiera('contrail::keystone_user_domain_name','Default'),
   $metadata_secret              = hiera('contrail::vrouter::metadata_proxy_shared_secret'),
   $metadata_host_ip             = hiera('internal_api_virtual_ip'),
   $router_asn                   = hiera('contrail::control::asn'),
+  $vrouter_gateway              = hiera('contrail::vrouter::gateway'),
   $ssl_enabled                  = hiera('contrail_ssl_enabled', false),
+  $vhost_user_mode              = hiera('contrail::vrouter::vhost_user_mode', ''),
 ) {
 
   File {
