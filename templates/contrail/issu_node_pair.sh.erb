@@ -36,17 +36,24 @@ fi
 working_dir=${working_dir:-'/tmp/contrail_issu'}
 mkdir -p "$working_dir"
 
-function resolve_short_name() {
-    # puppet use $::hostname for node provisioning which is a short name
-    resolveip -s $ip | cut -d '.' -f 1
+function resolve_name() {
+  local ip=$1
+  local old=$2
+
+  if [[ "$old" == 'pair_with_old' ]] ; then
+    local ssh_opts='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+    ssh -i ~/.ssh/issu_id_rsa $ssh_opts heat-admin@${ip} uname -n
+  else
+    resolveip -s $ip
+  fi
 }
 
 function proviosion_control(){
   local ip=$1
-  local api=$2
-  local port=$3
-  local use_old_script=$4
-  local name=$(resolve_short_name $ip)
+  local name=$2
+  local api=$3
+  local port=$4
+  local use_old_script=$5
 
   if [[ -n "$use_old_script" ]] ; then
     local ssh_opts='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
@@ -82,7 +89,8 @@ EOF
 ret=0
 #Pair old control nodes in new cluster (call on issu node).
 for ip in $old_control_servers_list_space ; do
-  proviosion_control $ip $new_api_server_ip $new_api_server_port || {
+  name=$(resolve_name $ip $step)
+  proviosion_control $ip $name $new_api_server_ip $new_api_server_port || {
     echo "ERROR: failed to provision old control node $ip in ISSU cluster"
     exit -1
   }
@@ -92,7 +100,8 @@ done
 use_old_script='true'
 [[ "$step"  != 'pair_with_old' ]] && use_old_script=''
 for ip in $issu_ips_list_space ; do
-  proviosion_control $ip $old_api_server_ip $old_api_server_port $use_old_script || {
+  name=$(resolve_name $ip)
+  proviosion_control $ip $name $old_api_server_ip $old_api_server_port $use_old_script || {
     echo "ERROR: failed to provision ISSU control node $ip in old cluster $old_api_server_ip:$old_api_server_port"
     exit -1
   }
