@@ -165,9 +165,7 @@ class tripleo::network::contrail::neutron_plugin (
     ensure  => link,
     target  => $::neutron::params::opencontrail_config_file,
     tag     => 'neutron-config-file',
-  }
-  $api_paste_config_file = '/usr/share/neutron/api-paste.ini'
-
+  } ->
   ini_setting { 'quota_driver':
     ensure  => present,
     path    => '/etc/neutron/neutron.conf',
@@ -176,13 +174,27 @@ class tripleo::network::contrail::neutron_plugin (
     value   => 'neutron_plugin_contrail.plugins.opencontrail.quota.driver.QuotaDriver',
   }
   if $aaa_mode == 'rbac' {
+    $api_paste_src_config_file = '/usr/share/neutron/api-paste.ini'
+    $api_paste_config_file = '/etc/neutron/api-paste.ini'
+    file { $api_paste_config_file:
+      source  => $api_paste_src_config_file,
+      tag     => 'neutron-config-file',
+    } ->
+    ini_setting { 'contrail_neutron_api_paste':
+      ensure  => present,
+      path    => '/etc/neutron/neutron.conf',
+      section => 'DEFAULT',
+      setting => 'api_paste_config',
+      value   => $api_paste_config_file,
+      tag     => 'neutron-config-file',
+    } ->
     ini_setting { 'filter:user_token':
       ensure  => present,
       path    => $api_paste_config_file,
       section => 'filter:user_token',
       setting => 'paste.filter_factory',
       value   => 'neutron_plugin_contrail.plugins.opencontrail.neutron_middleware:token_factory',
-    }
+    } ->
     ini_setting { 'composite:neutronapi_v2_0':
       ensure  => present,
       path    => $api_paste_config_file,
