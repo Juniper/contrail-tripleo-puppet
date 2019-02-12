@@ -69,15 +69,16 @@
 #  Defaults to empty hash.
 
 class tripleo::network::contrail::heat(
-  $step                   = Integer(hiera('step')),
-  $auth_host              = hiera('contrail::auth_host'),
-  $auth_protocol          = hiera('contrail::auth_protocol'),
-  $admin_password         = hiera('contrail::admin_password'),
-  $admin_user             = hiera('contrail::admin_user'),
-  $admin_tenant_name      = hiera('contrail::admin_tenant_name'),
-  $api_server             = hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
-  $api_port               = hiera('contrail::api_port', '8082'),
-  $api_server_use_ssl     = hiera('contrail_internal_api_ssl', false),
+  $step                              = Integer(hiera('step')),
+  $auth_host                         = hiera('contrail::auth_host'),
+  $auth_protocol                     = hiera('contrail::auth_protocol'),
+  $admin_password                    = hiera('contrail::admin_password'),
+  $admin_user                        = hiera('contrail::admin_user'),
+  $admin_tenant_name                 = hiera('contrail::admin_tenant_name'),
+  $api_server                        = hiera('contrail_config_vip', hiera('internal_api_virtual_ip')),
+  $api_port                          = hiera('contrail::api_port', '8082'),
+  $api_server_use_ssl                = hiera('contrail_internal_api_ssl', false),
+  $heat_config_extra                 = hiera('contrail_heat_config_extra', {}),
 ) {
   if $api_server_use_ssl {
     $use_ssl = 'True'
@@ -85,7 +86,7 @@ class tripleo::network::contrail::heat(
     $use_ssl = 'False'
   }
 
-  $heat_config = {
+  $contrail_config = {
     'clients_contrail' => {
       'api_base_url'  => '/',
       'api_server'    => $api_server,
