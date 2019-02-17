@@ -86,7 +86,29 @@ EOF
   sudo docker exec -it $config_api_container_id /provision_issu.sh
 }
 
-ret=0
+if [[ "$oper" == 'add' && "$step" == 'pair_with_old' ]] ; then
+  #Stop containers:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
+  for i in $(sudo docker ps |grep 'config_devicemgr\|config_schema\|config_svcmonitor' | awk '{print($1)}') ; do
+    sudo docker stop $i
+  done
+fi
+
+if [[ "$oper" == 'add' && "$step" == 'pair_with_new' ]] ; then
+  #Stop containers on newly deployd cluster:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
+  for ip in $old_control_servers_list_space ; do
+    ssh_opts='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+    cat << EOF | ssh -i ~/.ssh/issu_id_rsa $ssh_opts heat-admin@${ip}
+for i in \$(sudo docker ps |grep 'config_devicemgr\|config_schema\|config_svcmonitor' | awk '{print(\$1)}') ; do
+  sudo docker stop \$i
+done
+EOF
+
+  #Start containers:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
+  for i in $(sudo docker ps --all | grep 'config_devicemgr\|config_schema\|config_svcmonitor' | awk '{print($1)}') ; do
+    sudo docker start $i
+  done
+fi
+
 #Pair old control nodes in new cluster (call on issu node).
 for ip in $old_control_servers_list_space ; do
   name=$(resolve_name $ip $step)
@@ -106,10 +128,3 @@ for ip in $issu_ips_list_space ; do
     exit -1
   }
 done
-
-if [[ "$oper" == 'add' && "$step" == 'pair_with_old' ]] ; then
-  #Stop containers:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
-  for i in $(sudo docker ps |grep 'config_devicemgr\|config_schema\|config_svcmonitor' | awk '{print($1)}') ; do
-    sudo docker stop $i
-  done
-fi
