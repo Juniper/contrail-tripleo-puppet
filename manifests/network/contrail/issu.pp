@@ -16,6 +16,8 @@ class tripleo::network::contrail::issu(
   $cassandra_server_list        = hiera('contrail_database_node_ips'),
   $old_config_servers           = hiera('contrail_config_node_ips'),
   $old_control_servers          = hiera('contrail::vrouter::control_node_ips', hiera('contrail_control_node_ips')),
+  $old_analytics_servers        = hiera('contrail_analytics_node_ips'),
+  $old_analyticsdb_servers      = hiera('contrail_analytics_database_node_ips'),
   $container_registry           = hiera('contrail_issu_container_registry'),
   $container_tag                = hiera('contrail_issu_container_tag'),
   $host_ip                      = hiera('contrail_issu_host_ip'),
@@ -65,7 +67,6 @@ class tripleo::network::contrail::issu(
   # at revert step old should point to Contrail Config Database 
   # because 5.x Contrail has own rabbit
   $revert_issu_old_rabbit_server_list = join($zk_server_ip, ',')
-  
 
   $issu_api_info = "{\"${host_ip}\": [(\"${issu_ssh_user}\"), (\"\")]}"
   $revert_issu_api_info = join(['{"', join([join($old_config_servers, "\": [(\"${issu_ssh_user}\"), (\"\")],\"", ''), "\": [(\"${issu_ssh_user}\"), (\"\")]}"], '')], '')
@@ -73,6 +74,9 @@ class tripleo::network::contrail::issu(
   $first_old_config_server_ip = $old_config_servers[0]
   $old_config_servers_list_space = join($old_config_servers, ' ')
   $old_control_servers_list_space = join($old_control_servers, ' ')
+
+  $old_analytics_servers_list_space = join($old_analytics_servers, ' ')
+  $old_analyticsdb_servers_list_space = join($old_analyticsdb_servers, ' ')
 
   $issu_ips_list_space = join($issu_ips, ' ')
   $issu_ips_list_comma = join($issu_ips, ',')
