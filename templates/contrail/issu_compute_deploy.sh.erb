@@ -24,40 +24,57 @@ if [[ "${is_dpdk,,}" == 'true' ]] ; then
   dpdk_opts='--dpdk_enabled'
 fi
 
-container_registry=${container_registry:-<%= @container_registry %>}
-container_tag=${container_tag:-<%= @container_tag %>}
-ansible_deployer_image=${ansible_deployer_image:-"${container_registry}/contrail-kolla-ansible-deployer:${container_tag}"}
+function get_cfg_value() {
+  local grep_value=$1
+  sudo grep "^[ ]*$grep_value" /etc/contrail/contrail-vrouter-agent.conf | head -n 1 | tr -d ' ' | cut -d '=' -f 2
+}
 
-host_home_dir=~
-host_ssh_dir=${host_ssh_dir:-"$host_home_dir/.ssh"}
+create_ffu_env=''
+<% if @is_dpdk -%>
+type="dpdk"
+bind_int=$(get_cfg_value physical_interface_address)
+[[ -n "$bind_int" ]] && create_ffu_env='true'
+dpdk_driver=$(get_cfg_value physical_uio_driver)
+dpdk_ini='/etc/contrail/supervisord_vrouter_files/contrail-vrouter-dpdk.ini'
+core_mask=$(sudo grep -o "command.*taskset[ ]*[^ ]\+ " $dpdk_ini | awk '{print($NF)}')
+vlan_id=$(sudo grep -o "vlan_tci[ ]*[^ ]\+[ ]*" $dpdk_ini | awk '{print($NF)}')
+bond_mode=''
+bond_policy=''
+[ -e /sys/class/net/vhost0/bonding/mode ] && bond_mode=$(sudo cat /sys/class/net/vhost0/bonding/mode)
+[ -e /sys/class/net/vhost0/bonding/xmit_hash_policy ] && bond_policy=$(sudo cat /sys/class/net/vhost0/bonding/xmit_hash_policy)
+if [ -z "$bond_mode" ] ; then
+  bond_mode=$(grep -o "mode=[^, ]\+" $dpdk_ini | awk '{print($NF)}' | cut -d '=' -f 2)
+fi
+if [ -z "$bond_policy" ] ; then
+  bond_policy=$(grep -o "xmit_policy=[^, ]\+" $dpdk_ini | awk '{print($NF)}' | cut -d '=' -f 2)
+fi
+<% else %>
+type="kernel"
+bind_int=$(get_cfg_value physical_interface)
+[[ -n "$bind_int" ]] && create_ffu_env='true'
+<% end %>
 
-instances_yaml=${instances_yaml:-'<%= @instances_yaml_file_name %>'}
-working_dir=${working_dir:-'/tmp/contrail_issu'}
-mkdir -p "$working_dir"
-
-cp -f "$instances_yaml" "${working_dir}/instances.yaml"
-
-cat << EOF > ${working_dir}/container_hosts.yml
-ansible_python_interpreter: /opt/rh/python27/root/usr/bin/python2.7
-contrail_ansible_environment:
-  PATH: /opt/rh/python27/root/usr/bin:{{ lookup( 'env', 'PATH') }}
-  LD_LIBRARY_PATH: /opt/rh/python27/root/usr/lib64
-  PYTHONPATH: "{{ lookup( 'env', 'PYTHONPATH') }}:/usr/lib64/python2.7/site-packages"
+ffu_env_file="/etc/sysconfig/network-scripts/network-functions-vrouter-ffu-env-pre"
+if [[ "$create_ffu_env" == 'true' ]] ; then
+  cat << EOF | sudo tee $ffu_env_file
+TYPE=$type
+BIND_INT=$bind_int
+CONTRAIL_VROUTER_AGENT_CONTAINER_NAME=contrail_vrouter_agent
 EOF
-
-cat << EOF > ${working_dir}/entrypoint.sh
-#!/bin/bash -x
-mkdir -p ~/.ssh
-chmod 700 ~/.ssh
-cp $working_dir/ssh/* ~/.ssh/
-chown -R root:root ~/.ssh
-cd /root/contrail-ansible-deployer;
-cp -f ${working_dir}/instances.yaml config/
-mkdir -p inventory/group_vars
-cp -f ${working_dir}/container_hosts.yml inventory/group_vars/container_hosts.yml
-ansible-playbook -v -e orchestrator=openstack -i inventory/ playbooks/install_contrail.yml
-EOF
-chmod +x ${working_dir}/entrypoint.sh
+  <% if @is_dpdk -%>
+  [ -n "$core_mask" ] && echo "CPU_LIST=$core_mask" | sudo tee -a $ffu_env_file
+  [ -n "$bond_mode" ] && echo "BOND_MODE=$bond_mode" | sudo tee -a $ffu_env_file
+  [ -n "$bond_policy" ] && echo "BOND_POLICY=$bond_policy" | sudo tee -a $ffu_env_file
+  [ -n "$dpdk_driver" ] && echo "DRIVER=dpdk_driver" | sudo tee -a $ffu_env_file
+  [ -n "$vlan_id" ] && echo "VLAN_ID=vlan_id" | sudo tee -a $ffu_env_file
+  <% end %>
+  echo "$ffu_env_file is created"
+  cat $ffu_env_file
+else
+  echo "WARNING: cannot read bind interface data for vhost0 from /etc/contrail/contrail-vrouter-agent.conf"
+  echo "         the file $ffu_env_file"
+  echo "         must be prepared manually"
+fi
 
 sudo systemctl stop supervisor-vrouter
 sudo systemctl disable supervisor-vrouter
@@ -85,13 +102,48 @@ if [[ "$old_name" != "$new_name" ]] ; then
   provision_vrouter $new_name add
 fi
 
-sudo docker run --rm -it --network host --name issu_deploy \
-  -v "$working_dir":"$working_dir" \
-  -v "$host_ssh_dir":"$working_dir/ssh":ro \
-  --entrypoint ${working_dir}/entrypoint.sh \
-  $ansible_deployer_image
+# remove old vrouter links and update deps
+sudo find /lib/modules/ -name vrouter.ko -type f | sudo weak-modules --verbose --remove-modules
 
-if [[ $? != 0 ]] ; then
-  echo "ERROR: failed to run deploy issu Contrail Controller node"
-  exit -1
-fi
+# remove old vrouter
+sudo yum remove -y contrail-vrouter
+
+# remove old links after removal rpm 
+sudo find /lib/modules/ -name vrouter.ko -type l -exec rm -f {} +
+
+# update modules dependencies
+sudo depmod -a
+
+function run_step(){
+  local step=$1
+  local config_file="/var/lib/tripleo-config/hashed-docker-container-startup-config-step_${step}.json"
+  sudo paunch --debug apply --managed-by tripleo \
+    --config-id tripleo_step${step} \
+    --file $config_file
+
+  if [[ $? != 0 ]] ; then
+    echo "ERROR: failed to run step $step"
+    return 1
+  fi
+
+  local compact_config_file="/var/lib/tripleo-config/docker-container-startup-config-step_${step}.json"
+  sudo bash -c "cat $$config_file | jq -c '.' > $compact_config_file"
+  sudo chmod 600 $compact_config_file
+}
+
+for i in 1 2 3 ; do
+  run_step $i || exit -1
+done
+
+sleep 10
+
+# add new vrouter links and update deps
+sudo find /lib/modules/ -name vrouter.ko -type f | sudo weak-modules --verbose --add-modules
+
+run_step 5 || exit -1
+
+echo "ISSU node deployed successfully"
+echo "Wait Contrail is initializing..." 
+sleep 20
+echo "Contrail status:"
+sudo contrail-status
