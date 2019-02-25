@@ -1,0 +1,37 @@
+
+<% if @is_dpdk %>
+<% @vrouter_init_name="contrail-vrouter-kernel-init-dpdk" %>
+<% else %>
+<% @vrouter_init_name="contrail-vrouter-kernel-init" %>
+<% end %>
+{  
+  "<%= @vrouter_init_name %>": {
+
+    "image": "<%= @container_registry %>/<%= @vrouter_init_name %>:<%= @container_tag %>", 
+    "env_file": [
+      "/etc/contrail/common_contrail.env", 
+      "/etc/contrail/common_vrouter.env"
+    ],
+    "environment": [
+      <% if @is_dpdk %>
+      "AGENT_MODE=dpdk",
+      "CONTRAIL_VROUTER_AGENT_DPDK_DOCKER_IMAGE=<%= @container_registry %>/contrail-vrouter-agent-dpdk:<%= @container_tag %>",
+      "CONTRAIL_VROUTER_AGENT_DPDK_CONTAINER_NAME=contrail-vrouter-agent-dpdk",
+      "CONTRAIL_VROUTER_AGENT_CONTAINER_NAME=contrail_vrouter_agent",
+      "DPDK_COMMAND_ADDITIONAL_ARGS="
+      <% else %>
+      "CONTRAIL_VROUTER_AGENT_CONTAINER_NAME=contrail_vrouter_agent"
+      <% end %>
+    ],
+    "volumes": [
+      "/dev:/dev",
+      "/etc/sysconfig/network-scripts:/etc/sysconfig/network-scripts",
+      "/lib/modules:/lib/modules",
+      "/bin:/host/bin"
+    ],
+    "detach": false,
+    "net": "host",
+    "user": "root", 
+    "privileged": true, 
+  }
+}
