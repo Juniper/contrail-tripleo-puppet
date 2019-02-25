@@ -43,5 +43,12 @@ sudo docker run --rm -it --network host --name issu_deploy \
 
 if [[ $? != 0 ]] ; then
   echo "ERROR: failed to run deploy issu Contrail Controller node"
+  sudo contrail-status
   exit -1
 fi
+
+echo "ISSU node deployed successfully"
+echo "Wait Contrail is initializing..." 
+sleep 10
+echo "Contrail status:"
+sudo contrail-status
