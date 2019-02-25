@@ -1,0 +1,61 @@
+{
+  "contrail_vrouter_agent_nodemgr": {
+    "image": "<%= @container_registry %>/contrail-nodemgr:<%= @container_tag %>",
+    "user": "root",
+    "volumes": [
+      "/etc/hosts:/etc/hosts:ro",
+      "/etc/localtime:/etc/localtime:ro",
+      "/etc/pki/ca-trust/extracted:/etc/pki/ca-trust/extracted:ro",
+      "/etc/pki/ca-trust/source/anchors:/etc/pki/ca-trust/source/anchors:ro",
+      "/etc/pki/tls/certs/ca-bundle.crt:/etc/pki/tls/certs/ca-bundle.crt:ro",
+      "/etc/pki/tls/certs/ca-bundle.trust.crt:/etc/pki/tls/certs/ca-bundle.trust.crt:ro",
+      "/etc/pki/tls/cert.pem:/etc/pki/tls/cert.pem:ro",
+      "/dev/log:/dev/log",
+      "/etc/ssh/ssh_known_hosts:/etc/ssh/ssh_known_hosts:ro",
+      "/etc/puppet:/etc/puppet:ro",
+      "/etc/contrail/ssl:/etc/contrail/ssl:ro",
+      "/var/crashes:/var/crashes",
+      "/var/log/containers/contrail:/var/log/contrail",
+      "/var/run/docker.sock:/var/run/docker.sock"
+    ],
+    "net": "host",
+    "detach": true,
+    "env_file": [
+      "/etc/contrail/common_contrail.env",
+      "/etc/contrail/common_vrouter.env" 
+    ],
+    "restart": "always"
+  }, 
+  "contrail_vrouter_agent": {
+    "image": "<%= @container_registry %>/contrail-vrouter-agent:<%= @container_tag %>", 
+    "user": "root", 
+    "volumes": [
+      "/etc/hosts:/etc/hosts:ro", 
+      "/etc/localtime:/etc/localtime:ro", 
+      "/etc/pki/ca-trust/extracted:/etc/pki/ca-trust/extracted:ro", 
+      "/etc/pki/ca-trust/source/anchors:/etc/pki/ca-trust/source/anchors:ro", 
+      "/etc/pki/tls/certs/ca-bundle.crt:/etc/pki/tls/certs/ca-bundle.crt:ro", 
+      "/etc/pki/tls/certs/ca-bundle.trust.crt:/etc/pki/tls/certs/ca-bundle.trust.crt:ro", 
+      "/etc/pki/tls/cert.pem:/etc/pki/tls/cert.pem:ro", 
+      "/dev/log:/dev/log", 
+      "/etc/ssh/ssh_known_hosts:/etc/ssh/ssh_known_hosts:ro", 
+      "/etc/puppet:/etc/puppet:ro", 
+      "/etc/contrail/ssl:/etc/contrail/ssl:ro", 
+      "/var/crashes:/var/crashes", 
+      "/var/log/containers/contrail:/var/log/contrail", 
+      "/dev:/dev", 
+      "/etc/sysconfig/network-scripts:/etc/sysconfig/network-scripts", 
+      "/lib/modules:/lib/modules", 
+      "/var/run:/var/run", 
+      "/var/lib/contrail:/var/lib/contrail"
+    ], 
+    "net": "host", 
+    "env_file": [
+      "/etc/contrail/common_contrail.env", 
+      "/etc/contrail/common_vrouter.env"
+    ], 
+    "detach": true, 
+    "privileged": true, 
+    "restart": "always"
+  }
+}
