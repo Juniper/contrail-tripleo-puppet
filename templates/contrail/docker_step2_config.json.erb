@@ -1,0 +1,48 @@
+{  
+  "contrail-node-init": {
+    "image": "<%= @container_registry %>/contrail-node-init:<%= @container_tag %>", 
+    "env_file": [
+      "/etc/contrail/common_contrail.env", 
+      "/etc/contrail/common_vrouter.env"
+    ],
+    "environment": [
+      "INSTALL_PUPPET=True",
+      "CONTRAIL_STATUS_IMAG=<%= @container_registry %>/contrail-status:<%= @container_tag %>"
+    ],
+    "volumes": [
+      "/dev:/dev",
+      "/usr/bin:/host/usr/bin",
+      "/etc/sysctl.d:/etc/sysctl.d",
+      "/var/crashes:/var/crashes",
+      "/var/log/containers/contrail:/var/log/contrail",
+      "/var/run:/var/run",
+      "/tmp/:/tmp/"
+    ],
+    "detach": false,
+    "net": "host",
+    "user": "root", 
+    "privileged": true, 
+  }
+}
+
+contrail-vrouter-kernel-init-dpdk
+              - /dev:/dev
+              - /etc/sysconfig/network-scripts:/etc/sysconfig/network-scripts
+              - /lib/modules:/lib/modules
+              - /bin:/host/bin
+
+              AGENT_MODE: dpdk
+              CONTRAIL_VROUTER_AGENT_DPDK_DOCKER_IMAGE=<%= @container_registry %>/contrail-vrouter-agent-dpdk:<%= @container_tag %>
+              CONTRAIL_VROUTER_AGENT_DPDK_CONTAINER_NAME=contrail-vrouter-agent-dpdk
+              CONTRAIL_VROUTER_AGENT_CONTAINER_NAME=contrail_vrouter_agent
+              DPDK_COMMAND_ADDITIONAL_ARGS=
+
+
+contrail-vrouter-kernel-init
+
+              - /dev:/dev
+              - /etc/sysconfig/network-scripts:/etc/sysconfig/network-scripts
+              - /lib/modules:/lib/modules
+              - /bin:/host/bin
+              
+              CONTRAIL_VROUTER_AGENT_CONTAINER_NAME: "{{ _CONTRAIL_VROUTER_AGENT_CONTAINER_NAME_ }}"
