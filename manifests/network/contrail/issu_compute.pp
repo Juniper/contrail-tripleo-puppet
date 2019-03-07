@@ -68,7 +68,7 @@ class tripleo::network::contrail::issu_compute(
   $tripleo_cfg_dir = '/var/lib/tripleo-config'
   $instances_yaml_file_name="instances-${::hostname}.yaml"
   $issu_dir='/etc/contrail/issu'
-  exec { 'set selinux to permissive' :
+  exec { 'set selinux to permissive issu' :
     command => 'setenforce permissive',
     path    => '/bin:/sbin:/usr/bin:/usr/sbin',
     onlyif  => 'sestatus | grep -i "Current mode" | grep -q enforcing',
