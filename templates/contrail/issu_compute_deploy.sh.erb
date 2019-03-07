@@ -24,9 +24,11 @@ if [[ "${is_dpdk,,}" == 'true' ]] ; then
   dpdk_opts='--dpdk_enabled'
 fi
 
+[ ! -e /etc/contrail.org ] && sudo cp -r /etc/contrail /etc/contrail.org
+
 function get_cfg_value() {
   local grep_value=$1
-  sudo grep "^[ ]*$grep_value" /etc/contrail/contrail-vrouter-agent.conf | head -n 1 | tr -d ' ' | cut -d '=' -f 2
+  sudo grep "^[ ]*$grep_value" /etc/contrail.org/contrail-vrouter-agent.conf | head -n 1 | tr -d ' ' | cut -d '=' -f 2
 }
 
 create_ffu_env=''
@@ -35,7 +37,7 @@ type="dpdk"
 bind_int=$(get_cfg_value physical_interface_address)
 [[ -n "$bind_int" ]] && create_ffu_env='true'
 dpdk_driver=$(get_cfg_value physical_uio_driver)
-dpdk_ini='/etc/contrail/supervisord_vrouter_files/contrail-vrouter-dpdk.ini'
+dpdk_ini='/etc/contrail.org/supervisord_vrouter_files/contrail-vrouter-dpdk.ini'
 core_mask=$(sudo grep -o "command.*taskset[ ]*[^ ]\+ " $dpdk_ini | awk '{print($NF)}')
 vlan_id=$(sudo grep -o "vlan_tci[ ]*[^ ]\+[ ]*" $dpdk_ini | awk '{print($NF)}')
 bond_mode=''
@@ -65,8 +67,8 @@ EOF
   [ -n "$core_mask" ] && echo "CPU_LIST=$core_mask" | sudo tee -a $ffu_env_file
   [ -n "$bond_mode" ] && echo "BOND_MODE=$bond_mode" | sudo tee -a $ffu_env_file
   [ -n "$bond_policy" ] && echo "BOND_POLICY=$bond_policy" | sudo tee -a $ffu_env_file
-  [ -n "$dpdk_driver" ] && echo "DRIVER=dpdk_driver" | sudo tee -a $ffu_env_file
-  [ -n "$vlan_id" ] && echo "VLAN_ID=vlan_id" | sudo tee -a $ffu_env_file
+  [ -n "$dpdk_driver" ] && echo "DRIVER=$dpdk_driver" | sudo tee -a $ffu_env_file
+  [ -n "$vlan_id" ] && echo "VLAN_ID=$vlan_id" | sudo tee -a $ffu_env_file
   <% end %>
   echo "$ffu_env_file is created"
   cat $ffu_env_file
@@ -75,9 +77,6 @@ else
   echo "         the file $ffu_env_file"
   echo "         must be prepared manually"
 fi
-
-sudo systemctl stop supervisor-vrouter
-sudo systemctl disable supervisor-vrouter
 
 function provision_vrouter() {
   local name=$1
@@ -102,6 +101,13 @@ if [[ "$old_name" != "$new_name" ]] ; then
   provision_vrouter $new_name add
 fi
 
+<% if @is_dpdk -%>
+echo "INFO: no needs to reload vrouter driver for dpdk"
+<% else %>
+echo "INFO: reload vrouter driver"
+sudo systemctl stop supervisor-vrouter
+sudo systemctl disable supervisor-vrouter
+
 # remove old vrouter links and update deps
 sudo find /lib/modules/ -name vrouter.ko -type f | sudo weak-modules --verbose --remove-modules
 
@@ -113,6 +119,8 @@ sudo find /lib/modules/ -name vrouter.ko -type l -exec rm -f {} +
 
 # update modules dependencies
 sudo depmod -a
+<% end %>
+
 
 function run_step(){
   local step=$1
@@ -137,8 +145,68 @@ done
 
 sleep 10
 
+<% if @is_dpdk -%>
+echo "INFO: pre-pull containers before vhost is stopped"
+sudo docker pull <%= @container_registry %>/contrail-vrouter-agent-dpdk:<%= @container_tag %>
+sudo docker pull <%= @container_registry %>/contrail-vrouter-agent:<%= @container_tag %>
+
+echo "INFO: reinit vhost0 dpdk"
+# stop old services after init containers started to be able to
+# download and start dpdk init containers 
+sudo systemctl stop supervisor-vrouter
+sudo systemctl disable supervisor-vrouter
+
+# rebind nics to net driver if any
+for i in $(echo "$bind_int" | tr ',' ' ') ; do
+  if [ -f "/var/run/vrouter/$i" ] ; then
+    net_drv=$(sudo cat "/var/run/vrouter/$i" | awk '/Driver:/{print($2)}')
+  fi
+  [ -z "$net_drv" ] && net_drv="e1000"
+  if [ -e "/sys/bus/pci/drivers/${dpdk_driver}/$i" ] ; then
+      echo "INFO: unbind $i from $dpdk_driver"
+      sudo bash -c "echo -n $i > /sys/bus/pci/drivers/${dpdk_driver}/unbind"
+  fi
+  if [ ! -e "/sys/bus/pci/drivers/${net_drv}/$i" ] ; then
+      echo "INFO: bind $i to $drv"
+      # NOTE: new_id is not needed because nic is always bind to network on boot first
+      # local vendor="$(cat /sys/bus/pci/devices/${i}/vendor | awk -F 'x' '{print($NF)}')"
+      # local device="$(cat /sys/bus/pci/devices/${i}/device | awk -F 'x' '{print($NF)}')"
+      # [[ -n "$vendor" && -n "$device" ]] && echo -n "$vendor $device" > /sys/bus/pci/drivers/${drv}/new_id
+      sudo bash -c "echo -n "$i" > /sys/bus/pci/drivers/${net_drv}/bind"
+  fi
+done
+
+echo "INFO: waiting 10 sec to initial ifaces"
+sleep 10
+
+sudo ifup vhost0
+
+echo "INFO: rewrite vrouter_port_control, vif_plug_vrouter and nova_contrail_vif on host"
+function make_link() {
+  local vol=$(echo $1 | cut -d ':' -f 1)
+  local src_path=$(echo $1 | cut -d ':' -f 2)
+  local dest=$2
+  local mp="$(sudo docker volume inspect $vol | jq -r '.[].Mountpoint')"
+  if [ -z "$mp" ] ; then
+    echo "ERROR: cannot detect mount point for volume $vol"
+    return -1
+  fi
+  [ ! -e "${dest}.org" ] && sudo mv "$dest" "${dest}.org"
+  local src="$mp"
+  [ -n "$src_path" ] && src+="/$src_path"
+  sudo rm -f "${dest}"
+  sudo ln -s "${src}" "${dest}"
+}
+
+make_link nova_contrail_vif "/usr/lib/python2.7/site-packages/nova_contrail_vif"
+make_link nova_contrail_vif_egg "/usr/lib/python2.7/site-packages/nova_contrail_vif-0.1-py2.7.egg-info"
+make_link vif_plug_vrouter "/usr/lib/python2.7/site-packages/vif_plug_vrouter"
+make_link vrouter_port_control:vrouter-port-control /usr/bin/vrouter-port-control
+
+<% else %>
 # add new vrouter links and update deps
 sudo find /lib/modules/ -name vrouter.ko -type f | sudo weak-modules --verbose --add-modules
+<% end %>
 
 run_step 5 || exit -1
 
