@@ -23,6 +23,14 @@ EOF
 
 cat << EOF > ${working_dir}/entrypoint.sh
 #!/bin/bash -x
+# FIXME:
+# PyYAML 5.1 gets installed as a dependency to ansible or the oslo.config
+# package, but this version has a bug that prevents proper rendering of
+# lists when generating docker-compose files.
+# Till it gets fixed, install specific version of PyYAML required for the
+# install_contrail.yml playbook. Can be removed after its fixed upstream
+pip install pyyaml==3.13
+########################
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 cp $working_dir/ssh/* ~/.ssh/
