@@ -1,0 +1,210 @@
+#!/bin/bash -x
+
+my_file="$(readlink -e "$0")"
+my_dir="$(dirname $my_file)"
+
+issu_env_file=${issu_env_file: "$my_dir/issu.env"}
+
+if [ -f "$"issu_env_file ] ; then
+  source $issu_env_file
+fi
+
+if [[ -z "$container_registry" || \
+      -z "$container_tag" || \
+      -z "$admin_password" || \
+      -z "$admin_tenant_name" || \
+      -z "$admin_user" ]] ; then
+   echo "check that container_tag, container_registry, admin_password, admin_tenant_name, admin_user are not empty."
+   exit -1
+fi
+
+AUTH_PARAMS="--admin_password $admin_password"
+AUTH_PARAMS+=" --admin_tenant $admin_tenant_name"
+AUTH_PARAMS+=" --admin_user $admin_user"
+
+vhost_user_mode_opts=''
+if [[ -n "$vhost_user_mode"  ]] ; then
+  vhost_user_mode_opts="--virtual_router_vhost_user_mode ${vhost_user_mode}"
+fi
+
+dpdk_opts=''
+if [[ "${is_dpdk,,}" == 'true' ]] ; then
+  dpdk_opts='--dpdk_enabled'
+fi
+
+[ ! -e /etc/contrail.org ] && sudo cp -r /etc/contrail /etc/contrail.org
+
+function get_cfg_value() {
+  local grep_value=$1
+  sudo grep "^[ ]*$grep_value" /etc/contrail.org/contrail-vrouter-agent.conf | head -n 1 | tr -d ' ' | cut -d '=' -f 2
+}
+
+create_ffu_env=''
+<% if @is_dpdk -%>
+type="dpdk"
+bind_int=$(get_cfg_value physical_interface_address)
+[[ -n "$bind_int" ]] && create_ffu_env='true'
+dpdk_driver=$(get_cfg_value physical_uio_driver)
+dpdk_ini='/etc/contrail.org/supervisord_vrouter_files/contrail-vrouter-dpdk.ini'
+core_mask=$(sudo grep -o "command.*taskset[ ]*[^ ]\+ " $dpdk_ini | awk '{print($NF)}')
+vlan_id=$(sudo grep -o "vlan_tci[ ]*[^ ]\+[ ]*" $dpdk_ini | awk '{print($NF)}')
+bond_mode=''
+bond_policy=''
+[ -e /sys/class/net/vhost0/bonding/mode ] && bond_mode=$(sudo cat /sys/class/net/vhost0/bonding/mode)
+[ -e /sys/class/net/vhost0/bonding/xmit_hash_policy ] && bond_policy=$(sudo cat /sys/class/net/vhost0/bonding/xmit_hash_policy)
+if [ -z "$bond_mode" ] ; then
+  bond_mode=$(grep -o "mode=[^, ]\+" $dpdk_ini | awk '{print($NF)}' | cut -d '=' -f 2)
+fi
+if [ -z "$bond_policy" ] ; then
+  bond_policy=$(grep -o "xmit_policy=[^, ]\+" $dpdk_ini | awk '{print($NF)}' | cut -d '=' -f 2)
+fi
+<% else %>
+type="kernel"
+bind_int=$(get_cfg_value physical_interface)
+[[ -n "$bind_int" ]] && create_ffu_env='true'
+<% end %>
+
+ffu_env_file="/etc/sysconfig/network-scripts/network-functions-vrouter-ffu-env-pre"
+if [[ "$create_ffu_env" == 'true' ]] ; then
+  cat << EOF | sudo tee $ffu_env_file
+TYPE=$type
+BIND_INT=$bind_int
+CONTRAIL_VROUTER_AGENT_CONTAINER_NAME=contrail_vrouter_agent
+EOF
+  <% if @is_dpdk -%>
+  [ -n "$core_mask" ] && echo "CPU_LIST=$core_mask" | sudo tee -a $ffu_env_file
+  [ -n "$bond_mode" ] && echo "BOND_MODE=$bond_mode" | sudo tee -a $ffu_env_file
+  [ -n "$bond_policy" ] && echo "BOND_POLICY=$bond_policy" | sudo tee -a $ffu_env_file
+  [ -n "$dpdk_driver" ] && echo "DRIVER=$dpdk_driver" | sudo tee -a $ffu_env_file
+  [ -n "$vlan_id" ] && echo "VLAN_ID=$vlan_id" | sudo tee -a $ffu_env_file
+  <% end %>
+  echo "$ffu_env_file is created"
+  cat $ffu_env_file
+else
+  echo "WARNING: cannot read bind interface data for vhost0 from /etc/contrail/contrail-vrouter-agent.conf"
+  echo "         the file $ffu_env_file"
+  echo "         must be prepared manually"
+fi
+
+function provision_vrouter() {
+  local name=$1
+  local oper=$2
+  sudo python /opt/contrail/utils/provision_vrouter.py \
+    --oper $oper \
+    --host_name $name \
+    --host_ip ${host_ip} \
+    --api_server_ip ${api_server} \
+    --api_server_port ${api_port} \
+    --api_server_use_ssl ${internal_api_ssl} \
+    $AUTH_PARAMS \
+    $vhost_user_mode_opts \
+    $dpdk_opts
+}
+
+#Reprovision with fqdn
+old_name=$(uname -n)
+new_name=$(resolveip -s $host_ip)
+if [[ "$old_name" != "$new_name" ]] ; then
+  provision_vrouter $old_name del
+  provision_vrouter $new_name add
+fi
+
+
+function run_step(){
+  local step=$1
+  local config_file="/var/lib/tripleo-config/hashed-docker-container-startup-config-step_${step}.json"
+  sudo paunch --debug apply --managed-by tripleo \
+    --config-id tripleo_step${step} \
+    --file $config_file
+
+  if [[ $? != 0 ]] ; then
+    echo "ERROR: failed to run step $step"
+    return 1
+  fi
+
+  local compact_config_file="/var/lib/tripleo-config/docker-container-startup-config-step_${step}.json"
+  sudo bash -c "cat $config_file | jq -c '.' > $compact_config_file"
+  sudo chmod 600 $compact_config_file
+}
+
+for i in 1 2 3 ; do
+  run_step $i || exit -1
+done
+
+sleep 10
+
+<% if @is_dpdk -%>
+echo "INFO: pre-pull containers before vhost is stopped"
+sudo docker pull <%= @container_registry %>/contrail-vrouter-agent-dpdk:<%= @container_tag %>
+sudo docker pull <%= @container_registry %>/contrail-vrouter-agent:<%= @container_tag %>
+
+echo "INFO: reinit vhost0 dpdk"
+# stop old services after init containers started to be able to
+# download and start dpdk init containers 
+echo "INFO: stop and disable supervisor-vrouter"
+sudo systemctl stop supervisor-vrouter
+sudo systemctl disable supervisor-vrouter
+echo "INFO: waiting 60 sec"
+sleep 60
+
+if ! ifconfig vhost0 ; then
+  # if not initizlized yet
+  # rebind nics to net driver if any 
+  for i in $(echo "$bind_int" | tr ',' ' ') ; do
+    if [ -f "/var/run/vrouter/$i" ] ; then
+      net_drv=$(sudo cat "/var/run/vrouter/$i" | awk '/Driver:/{print($2)}')
+    fi
+    [ -z "$net_drv" ] && net_drv="e1000"
+    if [ -e "/sys/bus/pci/drivers/${dpdk_driver}/$i" ] ; then
+        echo "INFO: unbind $i from $dpdk_driver"
+        sudo bash -c "echo -n $i > /sys/bus/pci/drivers/${dpdk_driver}/unbind"
+    fi
+    if [ ! -e "/sys/bus/pci/drivers/${net_drv}/$i" ] ; then
+        echo "INFO: bind $i to $drv"
+        # NOTE: new_id is not needed because nic is always bind to network on boot first
+        # local vendor="$(cat /sys/bus/pci/devices/${i}/vendor | awk -F 'x' '{print($NF)}')"
+        # local device="$(cat /sys/bus/pci/devices/${i}/device | awk -F 'x' '{print($NF)}')"
+        # [[ -n "$vendor" && -n "$device" ]] && echo -n "$vendor $device" > /sys/bus/pci/drivers/${drv}/new_id
+        sudo bash -c "echo -n "$i" > /sys/bus/pci/drivers/${net_drv}/bind"
+    fi
+  done
+  sleep 60
+fi
+
+echo "INFO: ifup vhost0"
+sudo ifup vhost0
+
+echo "INFO: rewrite vrouter_port_control, vif_plug_vrouter and nova_contrail_vif on host"
+function make_link() {
+  local vol=$(echo $1 | cut -d ':' -f 1)
+  local src_path=$(echo $1 | cut -s -d ':' -f 2)
+  local dest=$2
+  local mp="$(sudo docker volume inspect $vol | jq -r '.[].Mountpoint')"
+  if [ -z "$mp" ] ; then
+    echo "ERROR: cannot detect mount point for volume $vol"
+    return -1
+  fi
+  [ ! -e "${dest}.org" ] && sudo mv "$dest" "${dest}.org"
+  local src="$mp"
+  [ -n "$src_path" ] && src+="/$src_path"
+  sudo rm -f "${dest}"
+  sudo ln -s "${src}" "${dest}"
+}
+
+#make_link nova_contrail_vif "/usr/lib/python2.7/site-packages/nova_contrail_vif"
+#make_link nova_contrail_vif_egg "/usr/lib/python2.7/site-packages/nova_contrail_vif-0.1-py2.7.egg-info"
+#make_link vif_plug_vrouter "/usr/lib/python2.7/site-packages/vif_plug_vrouter"
+make_link vrouter_port_control:vrouter-port-control /usr/bin/vrouter-port-control
+
+<% else %>
+# add new vrouter links and update deps
+sudo find /lib/modules/ -name vrouter.ko -type f | sudo weak-modules --verbose --add-modules
+<% end %>
+
+run_step 5 || exit -1
+
+echo "ISSU node deployed successfully"
+echo "Wait Contrail is initializing..." 
+sleep 20
+echo "Contrail status:"
+sudo contrail-status
