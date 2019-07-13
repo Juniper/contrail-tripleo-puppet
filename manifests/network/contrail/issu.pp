@@ -81,10 +81,6 @@ class tripleo::network::contrail::issu(
   $issu_ips_list_space = join($issu_ips, ' ')
   $issu_ips_list_comma = join($issu_ips, ',')
 
-  $issu_instances = {
-    "$::hostname" => "$host_ip",
-  }
-
   $issu_dir='/etc/contrail/issu'
 
   exec { 'set selinux to permissive' :

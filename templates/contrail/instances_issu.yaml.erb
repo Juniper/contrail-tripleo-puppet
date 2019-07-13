@@ -1,8 +1,8 @@
 
-<% if @issu_instances != [] -%>
-<% @issu_instances.keys.sort.each do |name| %>
-  <%= name %>:
-    ip: <%= issu_instances[name] %>
+<% if @issu_ips != [] -%>
+<% @issu_ips.sort.each do |node| %>
+  <%= node %>:
+    ip: <%= node %>
     provider: bms
     roles:
       config: null

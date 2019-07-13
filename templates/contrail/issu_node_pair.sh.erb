@@ -44,13 +44,14 @@ fi
 working_dir=${working_dir:-'/tmp/contrail_issu'}
 mkdir -p "$working_dir"
 
+ssh_opts='-i ~/.ssh/issu_id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
 function resolve_name() {
   local ip=$1
   local old=$2
 
   if [[ "$old" == 'pair_with_old' ]] ; then
-    local ssh_opts='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-    ssh -i ~/.ssh/issu_id_rsa $ssh_opts heat-admin@${ip} uname -n
+    ssh $ssh_opts heat-admin@${ip} uname -n
   else
     resolveip -s $ip
   fi
@@ -97,8 +98,7 @@ function proviosion_control() {
   local use_old_script=$5
 
   if [[ -n "$use_old_script" ]] ; then
-    local ssh_opts='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-    cat << EOF | ssh -i ~/.ssh/issu_id_rsa $ssh_opts heat-admin@${api}
+    cat << EOF | ssh $ssh_opts heat-admin@${api}
 set -x
 sudo python /opt/contrail/utils/provision_control.py --host_name $name \
   --host_ip $ip \
@@ -115,26 +115,39 @@ EOF
 
 if [[ "$oper" == 'add' && "$step" == 'pair_with_old' ]] ; then
   #Stop containers:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
-  for i in $(sudo docker ps |grep 'config_devicemgr\|config_schema\|config_svcmonitor' | awk '{print($1)}') ; do
-    sudo docker stop $i
+  for ip in $issu_ips_list_space ; do
+    echo Stop devmgr, schema and monitor contianer on $ip
+    cat << EOF | ssh $ssh_opts heat-admin@${ip}
+set -x
+for i in \$(sudo docker ps |grep 'config_devicemgr\|config_schema\|config_svcmonitor' | awk '{print(\$1)}') ; do
+  sudo docker stop \$i
+done
+EOF
+  done
+fi
+
+if [[ "$oper" == 'del' && "$step" == 'pair_with_old' ]] ; then
+  #Start containers on ISSU:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
+  for ip in $issu_ips_list_space ; do
+    echo Start devmgr, schema and monitor contianer on $ip
+    cat << EOF | ssh $ssh_opts heat-admin@${ip}
+set -x
+for i in \$(sudo docker ps --all | grep 'config_devicemgr\|config_schema\|config_svcmonitor' | awk '{print(\$1)}') ; do
+  sudo docker start \$i
+done
+EOF
   done
 fi
 
 if [[ "$oper" == 'add' && "$step" == 'pair_with_new' ]] ; then
   #Stop containers on newly deployd cluster:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
   for ip in $old_control_servers_list_space ; do
-    ssh_opts='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-    cat << EOF | ssh -i ~/.ssh/issu_id_rsa $ssh_opts heat-admin@${ip}
+    cat << EOF | ssh $ssh_opts heat-admin@${ip}
 set -x
 for i in \$(sudo docker ps |grep 'config_device_manager\|config_schema\|config_svc_monitor' | awk '{print(\$1)}') ; do
   sudo docker stop \$i
 done
 EOF
-  done
-
-  #Start containers on ISSU:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
-  for i in $(sudo docker ps --all | grep 'config_devicemgr\|config_schema\|config_svcmonitor' | awk '{print($1)}') ; do
-    sudo docker start $i
   done
 fi
 
@@ -178,8 +191,7 @@ fi
 if [[ "$oper" == 'del' && "$step" == 'pair_with_new' ]] ; then
   #Start containers on newly deployd cluster:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
   for ip in $old_control_servers_list_space ; do
-    ssh_opts='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-    cat << EOF | ssh -i ~/.ssh/issu_id_rsa $ssh_opts heat-admin@${ip}
+    cat << EOF | ssh $ssh_opts heat-admin@${ip}
 set -x
 for i in \$(sudo docker ps --all | grep 'config_device_manager\|config_schema\|config_svc_monitor' | awk '{print(\$1)}') ; do
   sudo docker start \$i
