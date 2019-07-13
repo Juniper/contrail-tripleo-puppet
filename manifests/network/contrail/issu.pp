@@ -59,9 +59,8 @@ class tripleo::network::contrail::issu(
   $issu_ips_list_space = join($issu_ips, ' ')
   $issu_ips_list_comma = join($issu_ips, ',')
 
-  $issu_instances = {
-    "$::hostname" => "$host_ip",
-  }
+  $issu_cassandra_server_list_9161 = join([join($issu_ips, ':9161 '),':9161'],'')
+  $issu_zk_server_ip_2181 = join([join($issu_ips, ':2181,'),':2181'],'')
 
   $issu_dir='/etc/contrail/issu'
 
