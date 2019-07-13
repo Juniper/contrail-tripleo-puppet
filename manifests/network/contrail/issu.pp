@@ -46,7 +46,7 @@ class tripleo::network::contrail::issu(
   # because 5.x Contrail has own rabbit
   $revert_issu_old_rabbit_server_list = join($zk_server_ip, ',')
 
-  $issu_api_info = "{\"${host_ip}\": [(\"${issu_ssh_user}\"), (\"\")]}"
+  $issu_api_info = join(['{"', join([join($issu_ips, "\": [(\"${issu_ssh_user}\"), (\"\")],\"", ''), "\": [(\"${issu_ssh_user}\"), (\"\")]}"], '')], '')
   $revert_issu_api_info = join(['{"', join([join($old_config_servers, "\": [(\"${issu_ssh_user}\"), (\"\")],\"", ''), "\": [(\"${issu_ssh_user}\"), (\"\")]}"], '')], '')
 
   $first_old_config_server_ip = $old_config_servers[0]
@@ -59,9 +59,8 @@ class tripleo::network::contrail::issu(
   $issu_ips_list_space = join($issu_ips, ' ')
   $issu_ips_list_comma = join($issu_ips, ',')
 
-  $issu_instances = {
-    "$::hostname" => "$host_ip",
-  }
+  $issu_cassandra_server_list_9161 = join([join($issu_ips, ':9161 '),':9161'],'')
+  $issu_zk_server_ip_2181 = join([join($issu_ips, ':2181,'),':2181'],'')
 
   $issu_dir='/etc/contrail/issu'
 
