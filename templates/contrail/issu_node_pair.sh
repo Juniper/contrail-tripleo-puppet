@@ -47,10 +47,11 @@ fi
 
 mkdir -p "$working_dir"
 
+ssh_opts='-i ~/.ssh/issu_id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
 function resolve_name() {
   local ip=$1
-  local ssh_opts='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-  local ssh_cmd="ssh -i ~/.ssh/issu_id_rsa $ssh_opts heat-admin@${ip}"
+  local ssh_cmd="ssh $ssh_opts heat-admin@${ip}"
   local release=$($ssh_cmd sudo docker inspect contrail-node-init | jq '.[].Config.Labels.release')
   if [[ "$release" =~ '5.0' ]] ; then
     # for 5.0 use short name
@@ -109,23 +110,32 @@ function provision_control() {
 docker_containers_filter='config_device_manager\|config_schema\|config_svc_monitor'
 if [[ "$oper" == 'add' && "$step" == 'pair_with_old' ]] ; then
   #Stop containers:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
-  for i in $(sudo docker ps |grep "$docker_containers_filter" | awk '{print($1)}') ; do
-    sudo docker stop $i
+  for ip in $issu_ips_list_space ; do
+    cat << EOF | ssh $ssh_opts heat-admin@${ip}
+set -x
+for i in \$(sudo docker ps | grep "$docker_containers_filter" | awk '{print(\$1)}') ; do
+  sudo docker stop \$i
+done
+EOF
   done
 fi
 
 if [[ "$oper" == 'del' && "$step" == 'pair_with_old' ]] ; then
   #Start containers on ISSU:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
-  for i in $(sudo docker ps --all | grep "$docker_containers_filter" | awk '{print($1)}') ; do
-    sudo docker start $i
+  for ip in $issu_ips_list_space ; do
+    cat << EOF | ssh $ssh_opts heat-admin@${ip}
+set -x
+for i in \$(sudo docker ps --all | grep "$docker_containers_filter" | awk '{print(\$1)}') ; do
+  sudo docker start \$i
+done
+EOF
   done
 fi
 
 if [[ "$oper" == 'add' && "$step" == 'pair_with_new' ]] ; then
   #Stop containers on newly deployd cluster:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
   for ip in $old_control_servers_list_space ; do
-    ssh_opts='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-    cat << EOF | ssh -i ~/.ssh/issu_id_rsa $ssh_opts heat-admin@${ip}
+    cat << EOF | ssh $ssh_opts heat-admin@${ip}
 set -x
 for i in \$(sudo docker ps |grep "$docker_containers_filter" | awk '{print(\$1)}') ; do
   sudo docker stop \$i
@@ -171,10 +181,9 @@ fi
 if [[ "$oper" == 'del' && "$step" == 'pair_with_new' ]] ; then
   #Start containers on newly deployd cluster:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
   for ip in $old_control_servers_list_space ; do
-    ssh_opts='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-    cat << EOF | ssh -i ~/.ssh/issu_id_rsa $ssh_opts heat-admin@${ip}
+    cat << EOF | ssh $ssh_opts heat-admin@${ip}
 set -x
-for i in \$(sudo docker ps --all | grep 'config_device_manager\|config_schema\|config_svc_monitor' | awk '{print(\$1)}') ; do
+for i in \$(sudo docker ps --all | grep "$docker_containers_filter" | awk '{print(\$1)}') ; do
   sudo docker start \$i
 done
 EOF
