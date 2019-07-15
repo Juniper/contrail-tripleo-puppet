@@ -14,10 +14,11 @@ if [[ -z "$admin_user" || \
       -z "$admin_password" || \
       -z "$router_asn" || \
       -z "$issu_ips_list_space" || \
+      -z "$issu_control_ips_space" || \
       -z "$issu_api_server_ip" || \
       -z "$old_api_server_ip" || \
       -z "$old_control_servers_list_space" ]] ; then
-   echo "check that admin_user, admin_tenant_name, admin_password, router_asn, issu_ips_list_space, issu_api_server_ip, old_api_server_ip, old_control_servers_list_space are not empty."
+   echo "check that admin_user, admin_tenant_name, admin_password, router_asn, issu_ips_list_space, issu_control_ips_space, issu_api_server_ip, old_api_server_ip, old_control_servers_list_space are not empty."
    exit -1
 fi
 
@@ -154,7 +155,7 @@ for ip in $old_control_servers_list_space ; do
 done
 
 #Pair/unpair issu control nodes in with cluster
-for ip in $issu_ips_list_space ; do
+for ip in $issu_control_ips_space ; do
   name=$(resolve_name $ip)
   provision_control $ip $name $old_api_server_ip $old_api_server_port|| {
     echo "ERROR: failed to provision ISSU control node $ip in old cluster $old_api_server_ip:$old_api_server_port"

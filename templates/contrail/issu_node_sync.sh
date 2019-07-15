@@ -65,7 +65,7 @@ sudo docker run --rm --detach -it --network host --name issu-run-sync \
   $config_api_image
 
 echo "Waiting for sync initialization for 5 sec."
-for i in {1..5} ; do
+for i in {1..10} ; do
   sleep 1
   printf "."
 done
