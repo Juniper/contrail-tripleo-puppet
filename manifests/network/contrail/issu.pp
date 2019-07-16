@@ -23,6 +23,7 @@ class tripleo::network::contrail::issu(
   $host_ip                      = hiera('contrail_issu_host_ip'),
   $ibgp_auto_mesh               = true,
   $issu_ips                     = hiera('contrail_issu_node_ips'),
+  $issu_control_ips             = hiera('contrail_issu_control_node_ips', hiera('contrail_issu_node_ips')),
   $issu_ssh_user                = hiera('contrail_issu_ssh_user'),
   $keystone_project_domain_name = hiera('contrail::keystone_project_domain_name','Default'),
   $keystone_region              = hiera('contrail::keystone_region','regionOne'),
@@ -80,6 +81,9 @@ class tripleo::network::contrail::issu(
 
   $issu_ips_list_space = join($issu_ips, ' ')
   $issu_ips_list_comma = join($issu_ips, ',')
+
+  $issu_control_ips_list_space = join($issu_control_ips, ' ')
+  $issu_control_ips_list_comma = join($issu_control_ips, ',')
 
   $issu_dir='/etc/contrail/issu'
 

@@ -19,6 +19,7 @@ class tripleo::network::contrail::issu_compute(
   $host_ip                      = hiera('contrail_issu_host_ip'),
   $ibgp_auto_mesh               = true,
   $issu_ips                     = hiera('contrail_issu_node_ips'),
+  $issu_control_ips             = hiera('contrail_issu_control_node_ips', hiera('contrail_issu_node_ips')),
   $is_dpdk                      = hiera('contrail::vrouter::is_dpdk',false),
   $is_tsn                       = hiera('contrail::vrouter::is_tsn',false),
   $sriov_on                     = hiera('contrail::vrouter::sriov_on', false),
@@ -61,9 +62,8 @@ class tripleo::network::contrail::issu_compute(
   $issu_ips_list_space = join($issu_ips, ' ')
   $issu_ips_list_comma = join($issu_ips, ',')
 
-  $compute_instances = {
-    "$::hostname" => "$host_ip",
-  }
+  $issu_control_ips_list_space = join($issu_control_ips, ' ')
+  $issu_control_ips_list_comma = join($issu_control_ips, ',')
 
   $tripleo_cfg_dir = '/var/lib/tripleo-config'
   $instances_yaml_file_name="instances-${::hostname}.yaml"
