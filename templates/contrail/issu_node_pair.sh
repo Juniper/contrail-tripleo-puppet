@@ -95,7 +95,10 @@ EOF
   # it instead of copying file via docker cp because
   # it fails often by a nature do docker cp
   sudo cp -f ${working_dir}/provision_issu.sh /var/crashes/
-  sudo docker exec -it $container_id /var/crashes/provision_issu.sh
+  local output=$(sudo docker exec -it $container_id /var/crashes/provision_issu.sh 2>&1)
+  if ! echo "$output" | grep -q 'not found' ; then
+    echo "$output"
+  fi
   sudo rm -f /var/crashes/provision_issu.sh  
 }
 
