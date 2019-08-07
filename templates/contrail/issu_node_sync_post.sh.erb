@@ -1,0 +1,40 @@
+
+#!/bin/bash -x
+
+container_registry=${container_registry:-<%= @container_registry %>}
+container_tag=${container_tag:-<%= @container_tag %>}
+config_api_image=${ansible_deployer_image:-"${container_registry}/contrail-controller-config-api:${container_tag}"}
+
+issu_config=${issu_config:-'issu.conf'}
+issu_config_file=$(echo "$issu_config" | awk -F '/' '{print($NF)}')
+
+host_home_dir=~
+host_ssh_dir=${host_ssh_dir:-"$host_home_dir/.ssh"}
+
+echo "Stop and remove issu sync container"
+sudo docker rm --force issu-run-sync || true
+
+working_dir=${working_dir:-'/tmp/contrail_issu'}
+mkdir -p $working_dir
+
+cp -f "$issu_config" "${working_dir}/"
+
+cat << EOF > ${working_dir}/entrypoint.sh
+#!/bin/bash -x
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+cp -f "$working_dir/ssh/issu_id_rsa" ~/.ssh/id_rsa
+cp -f "$working_dir/ssh/issu_id_rsa.pub" ~/.ssh/id_rsa.pub
+chown -R root:root ~/.ssh
+/usr/bin/contrail-issu-post-sync -c $working_dir/$issu_config_file
+/usr/bin/contrail-issu-zk-sync -c $working_dir/$issu_config_file
+
+EOF
+chmod +x ${working_dir}/entrypoint.sh
+
+sudo docker run --rm -it --network host \
+  -v "$working_dir":"$working_dir" \
+  -v "$host_ssh_dir":"$working_dir/ssh":ro \
+  --entrypoint ${working_dir}/entrypoint.sh \
+  $config_api_image 
+

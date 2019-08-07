@@ -129,6 +129,11 @@ class tripleo::network::contrail::issu(
     content => template('tripleo/contrail/issu_node_sync.sh.erb'),
     mode    => 755,
   } ->
+  file { "${issu_dir}/issu_node_sync_post.sh" :
+    ensure  => file,
+    content => template('tripleo/contrail/issu_node_sync_post.sh.erb'),
+    mode    => 755,
+  } ->
   file { "${issu_dir}/instances_issu.yaml" :
     ensure  => file,
     content => template('tripleo/contrail/instances_common.yaml.erb', 'tripleo/contrail/instances_issu.yaml.erb'),
