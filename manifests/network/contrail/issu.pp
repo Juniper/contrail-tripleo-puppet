@@ -107,5 +107,10 @@ class tripleo::network::contrail::issu(
     ensure  => file,
     content => template('tripleo/contrail/issu_node_sync.sh'),
     mode    => '0755',
+  } ->
+  file { "${issu_dir}/issu_node_sync_post.sh" :
+    ensure  => file,
+    content => template('tripleo/contrail/issu_node_sync_post.sh'),
+    mode    => '0755',
   }
 }
