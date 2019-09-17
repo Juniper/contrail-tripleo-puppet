@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 my_file="$(readlink -e "$0")"
 my_dir="$(dirname $my_file)"
@@ -26,7 +26,7 @@ mkdir -p $working_dir
 cp -f "$issu_config" "${working_dir}/"
 
 cat << EOF > ${working_dir}/entrypoint.sh
-#!/bin/bash -x
+#!/bin/bash
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 cp -f "$working_dir/ssh/issu_id_rsa" ~/.ssh/id_rsa
@@ -48,7 +48,7 @@ if [[ $? != 0 ]] ; then
 fi
 
 cat << EOF > ${working_dir}/entrypoint.sh
-#!/bin/bash -x
+#!/bin/bash
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 cp -f "$working_dir/ssh/issu_id_rsa" ~/.ssh/id_rsa

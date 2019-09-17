@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 my_file="$(readlink -e "$0")"
 my_dir="$(dirname $my_file)"
@@ -78,7 +78,7 @@ function provision() {
   local opts="$@"
 
   cat << EOF > ${working_dir}/provision_issu.sh
-#!/bin/bash -x
+#!/bin/bash
 LOG_LEVEL=SYS_NOTICE
 source /common.sh
 set_third_party_auth_config
@@ -116,7 +116,6 @@ if [[ "$oper" == 'add' && "$step" == 'pair_with_old' ]] ; then
   #Stop containers:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
   for ip in $issu_ips_list_space ; do
     cat << EOF | ssh $ssh_opts heat-admin@${ip}
-set -x
 for i in \$(sudo docker ps | grep "$docker_containers_filter" | awk '{print(\$1)}') ; do
   sudo docker stop \$i
 done
@@ -128,7 +127,6 @@ if [[ "$oper" == 'del' && "$step" == 'pair_with_old' ]] ; then
   #Start containers on ISSU:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
   for ip in $issu_ips_list_space ; do
     cat << EOF | ssh $ssh_opts heat-admin@${ip}
-set -x
 for i in \$(sudo docker ps --all | grep "$docker_containers_filter" | awk '{print(\$1)}') ; do
   sudo docker start \$i
 done
@@ -140,7 +138,6 @@ if [[ "$oper" == 'add' && "$step" == 'pair_with_new' ]] ; then
   #Stop containers on newly deployd cluster:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
   for ip in $old_control_servers_list_space ; do
     cat << EOF | ssh $ssh_opts heat-admin@${ip}
-set -x
 for i in \$(sudo docker ps |grep "$docker_containers_filter" | awk '{print(\$1)}') ; do
   sudo docker stop \$i
 done
@@ -186,7 +183,6 @@ if [[ "$oper" == 'del' && "$step" == 'pair_with_new' ]] ; then
   #Start containers on newly deployd cluster:  contrail-device-manager, contrail-schema-transformer, contrail-svcmonitor:
   for ip in $old_control_servers_list_space ; do
     cat << EOF | ssh $ssh_opts heat-admin@${ip}
-set -x
 for i in \$(sudo docker ps --all | grep "$docker_containers_filter" | awk '{print(\$1)}') ; do
   sudo docker start \$i
 done
