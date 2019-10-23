@@ -53,7 +53,9 @@ ssh_opts='-i ~/.ssh/issu_id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFil
 function resolve_name() {
   local ip=$1
   local ssh_cmd="ssh $ssh_opts heat-admin@${ip}"
-  local release=$($ssh_cmd sudo docker inspect contrail-node-init | jq '.[].Config.Labels.release')
+  local id=$($ssh_cmd sudo docker ps -a | awk '/contrail-node-init/{print($NF)}' | head -n 1)
+  [ -z "$id" ] && id="contrail-node-init"
+  local release=$($ssh_cmd sudo docker inspect $id | jq '.[].Config.Labels.release')
   if [[ "$release" =~ '5.0' ]] ; then
     # for 5.0 use short name
     $ssh_cmd uname -n
