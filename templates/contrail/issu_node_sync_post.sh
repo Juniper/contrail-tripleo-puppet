@@ -9,15 +9,19 @@ if [ -f "$issu_env_file" ] ; then
   source $issu_env_file
 fi
 
-if [[ -z "$ansible_deployer_image" && ( -z "$container_registry" || -z "$container_tag" ) ]] ; then
-   echo "check that container_tag and container_registry are not empty if ansible_deployer_image is empty"
+if [[ -z "$config_api_image" && ( -z "$container_registry" || -z "$container_tag" ) ]] ; then
+   echo "check that container_tag and container_registry are not empty if config_api_image is empty"
    exit -1
 fi
 
 host_home_dir=~
 host_ssh_dir=${host_ssh_dir:-"$host_home_dir/.ssh"}
 working_dir=${working_dir:-'/tmp/contrail_issu'}
-config_api_image=${ansible_deployer_image:-"${container_registry}/contrail-controller-config-api:${container_tag}"}
+config_api_image=${config_api_image:-}
+if [[ -z "$config_api_image" ]] ; then
+  config_api_image=$(docker images  | awk '/contrail-controller-config-api/{print($1":"$2)}')
+  [ -z "$config_api_image" ] && config_api_image="${container_registry}/contrail-controller-config-api:${container_tag}"
+fi
 issu_config=${issu_config:-'issu.conf'}
 issu_config_file=$(echo "$issu_config" | awk -F '/' '{print($NF)}')
 
