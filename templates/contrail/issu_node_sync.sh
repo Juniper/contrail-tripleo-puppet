@@ -36,7 +36,7 @@ chown -R root:root ~/.ssh
 EOF
 chmod +x ${working_dir}/entrypoint.sh
 
-sudo docker run --rm -it --network host \
+sudo docker run --rm -t --network host \
   -v "$working_dir":"$working_dir" \
   -v "$host_ssh_dir":"$working_dir/ssh":ro \
   --entrypoint ${working_dir}/entrypoint.sh \
@@ -58,7 +58,7 @@ chown -R root:root ~/.ssh
 EOF
 chmod +x ${working_dir}/entrypoint.sh
 
-sudo docker run --rm --detach -it --network host --name issu-run-sync \
+sudo docker run --rm --detach --network host --name issu-run-sync \
   -v "$working_dir":"$working_dir" \
   -v "$host_ssh_dir":"$working_dir/ssh":ro \
   --entrypoint ${working_dir}/entrypoint.sh \
