@@ -8,10 +8,17 @@ old_rabbit_q_name = vnc-config.issu-queue
 old_rabbit_vhost = /
 old_rabbit_port = 5673
 old_rabbit_address_list = <%= @old_rabbit_server_list_5673 %>
+old_rabbit_use_ssl = <%= @contrail_ssl_enabled3 %>
+old_rabbit_ssl_version = <%= @contrail_ssl_version %>
+old_rabbit_ssl_ca_certs = <%= @contrail_ssl_ca_certs %>
+old_rabbit_ssl_keyfile = <%= @contrail_ssl_keyfile %>
+old_rabbit_ssl_certfile = <%= @contrail_ssl_certfile3 %>
 
 old_cassandra_user = ''
 old_cassandra_password = ''
 old_cassandra_address_list = <%= @old_cassandra_server_list_9161 %>
+old_cassandra_use_ssl = <%= @contrail_ssl_enabled3 %>
+old_cassandra_ca_certs = <%= @contrail_ssl_ca_certs %>
 
 old_zookeeper_address_list = <%= @old_zk_server_ip_2181 %>
 
@@ -26,8 +33,15 @@ new_rabbit_q_name = vnc-config.issu-queue
 new_rabbit_vhost = /
 new_rabbit_port = 5673
 new_rabbit_address_list = <%= @issu_ips_list_comma %>
+new_rabbit_use_ssl = <%= @contrail_ssl_enabled3 %>
+new_rabbit_ssl_version = <%= @contrail_ssl_version %>
+new_rabbit_ssl_ca_certs = <%= @contrail_ssl_ca_certs %>
+new_rabbit_ssl_keyfile = <%= @contrail_ssl_keyfile %>
+new_rabbit_ssl_certfile = <%= @contrail_ssl_certfile3 %>
 
 new_cassandra_address_list = <%= @issu_cassandra_server_list_9161 %>
+new_cassandra_use_ssl = <%= @contrail_ssl_enabled3 %>
+new_cassandra_ca_certs = <%= @contrail_ssl_ca_certs %>
 
 new_zookeeper_address_list = <%= @issu_zk_server_ip_2181 %>
 
