@@ -28,7 +28,17 @@ class tripleo::network::contrail::issu(
   $rabbit_server                = hiera('contrail_database_node_ips'),
   $router_asn                   = hiera('contrail::control::asn', 64512),
   $zk_server_ip                 = hiera('contrail_database_node_ips'),
+  $contrail_ssl_enabled         = hiera('contrail_ssl_enabled', false),
+  $contrail_ssl_version         = hiera('contrail_ssl_version', 'sslv23'),
+  $contrail_certificates_specs  = hiera('contrail_certificates_specs', undef),
+  $contrail_ssl_ca_certs        = hiera('contrail_ssl_ca_certs', '/etc/contrail/ssl/certs/ca-cert.pem'),
+  $contrail_ssl_certfile        = hiera('contrail::service_cert_file', '/etc/contrail/ssl/certs/server.pem'),
+  $contrail_ssl_keyfile         = hiera('contrail::service_key_file', '/etc/contrail/ssl/private/server-privkey.pem'),
 ) {
+
+  if $contrail_certificates_specs != undef {
+    $contrail_ssl_ca_certs = '/etc/ipa/ca.crt'
+  }
 
   File {
     mode  => '0644',
