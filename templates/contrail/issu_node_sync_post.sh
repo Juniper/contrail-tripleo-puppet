@@ -19,7 +19,7 @@ host_ssh_dir=${host_ssh_dir:-"$host_home_dir/.ssh"}
 working_dir=${working_dir:-'/tmp/contrail_issu'}
 config_api_image=${config_api_image:-}
 if [[ -z "$config_api_image" ]] ; then
-  config_api_image=$(docker images  | awk '/contrail-controller-config-api/{print($1":"$2)}')
+  config_api_image=$(sudo docker images  | awk '/contrail-controller-config-api/{print($1":"$2)}')
   [ -z "$config_api_image" ] && config_api_image="${container_registry}/contrail-controller-config-api:${container_tag}"
 fi
 issu_config=${issu_config:-'issu.conf'}
