@@ -123,7 +123,7 @@
 class tripleo::network::contrail::neutron_plugin (
   $step                         = Integer(hiera('step')),
   $aaa_mode                     = hiera('contrail::aaa_mode'),
-  $contrail_extensions          = hiera('contrail::vrouter::contrail_extensions'),
+  $contrail_extensions          = hiera('contrail::vrouter::contrail_extensions', undef),
   $admin_password               = hiera('contrail::admin_password'),
   $admin_tenant_name            = hiera('contrail::admin_tenant_name'),
   $admin_user                   = hiera('contrail::admin_user'),
@@ -140,11 +140,20 @@ class tripleo::network::contrail::neutron_plugin (
   $keystone_project_domain_name = hiera('contrail::keystone_project_domain_name','Default'),
   $keystone_region              = hiera('contrail::keystone_region','regionOne'),
   $keystone_user_domain_name    = hiera('contrail::keystone_user_domain_name','Default'),
+  $contrail_version             = hiera('contrail::contrail_version),
 ) {
   include ::neutron::deps
   include ::neutron::params
 
   File<| |> -> Ini_setting<| |>
+
+  if not $contrail_extensions {
+    if $contrail_version < 2005 {
+      contrail_extensions = 'contrail:None'
+    } else {
+      contrail_extensions = 'ipam:neutron_plugin_contrail.plugins.opencontrail.contrail_plugin_ipam.NeutronPluginContrailIpam,policy:neutron_plugin_contrail.plugins.opencontrail.contrail_plugin_policy.NeutronPluginContrailPolicy,route-table:neutron_plugin_contrail.plugins.opencontrail.contrail_plugin_vpc.NeutronPluginContrailVpc,contrail:None'
+    }
+  }
 
   validate_array($contrail_extensions)
 
@@ -160,6 +169,13 @@ class tripleo::network::contrail::neutron_plugin (
     group  => 'neutron',
     mode   => '0640'}
   )
+  if $contrail_version < 2005 {
+    quota_driver = 'neutron_plugin_contrail.plugins.opencontrail.quota.driver.QuotaDriver'
+    paste_filter_factory = 'neutron_plugin_contrail.plugins.opencontrail.neutron_middleware:token_factory'
+  } else {
+    quota_driver = 'neutron_plugin_contrail.quota.driver.QuotaDriver'
+    paste_filter_factory = 'neutron_plugin_contrail.plugin.middlewares.user_token:token_factory'
+  }
 
   file { '/etc/neutron/plugin.ini':
     ensure  => link,
@@ -171,7 +187,7 @@ class tripleo::network::contrail::neutron_plugin (
     path    => '/etc/neutron/neutron.conf',
     section => 'quotas',
     setting => 'quota_driver',
-    value   => 'neutron_plugin_contrail.plugins.opencontrail.quota.driver.QuotaDriver',
+    value   => $quota_driver,
   }
   if $aaa_mode == 'rbac' {
     $api_paste_src_config_file = '/usr/share/neutron/api-paste.ini'
@@ -193,7 +209,7 @@ class tripleo::network::contrail::neutron_plugin (
       path    => $api_paste_config_file,
       section => 'filter:user_token',
       setting => 'paste.filter_factory',
-      value   => 'neutron_plugin_contrail.plugins.opencontrail.neutron_middleware:token_factory',
+      value   => $paste_filter_factory,
     } ->
     ini_setting { 'composite:neutronapi_v2_0':
       ensure  => present,
