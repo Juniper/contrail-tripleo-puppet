@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5d6788c9_121aab0a",
+        "filename": "manifests/network/contrail/neutron_plugin.pp",
+        "patchSetId": 1
+      },
+      "lineNbr": 143,
+      "author": {
+        "id": 437
+      },
+      "writtenOn": "2020-04-10T16:24:50Z",
+      "side": 1,
+      "message": "If the difference is only in values provided for extensions and quotedriver then i\nwould remove version at all\nthere is contrail_extensions input paramter - lets fill it correctly in templates depending on \nthe ContrailImageTag there.\nthe same about quote driver - just add new hiera value like for extensions and provide value in templates depending on the image tag.",
+      "range": {
+        "startLine": 143,
+        "startChar": 0,
+        "endLine": 143,
+        "endChar": 69
+      },
+      "revId": "64339792104ccedc548651baa755248fee880640",
+      "serverId": "c72cd27d-1743-4a55-84a4-cd13b8400c52",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a536d3f9_aeac3671",
+        "filename": "manifests/network/contrail/neutron_plugin.pp",
+        "patchSetId": 1
+      },
+      "lineNbr": 174,
+      "author": {
+        "id": 437
+      },
+      "writtenOn": "2020-04-10T16:24:50Z",
+      "side": 1,
+      "message": "where they to be used?",
+      "range": {
+        "startLine": 173,
+        "startChar": 0,
+        "endLine": 174,
+        "endChar": 11
+      },
+      "revId": "64339792104ccedc548651baa755248fee880640",
+      "serverId": "c72cd27d-1743-4a55-84a4-cd13b8400c52",
+      "unresolved": true
+    }
+  ]
+}
