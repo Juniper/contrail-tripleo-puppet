@@ -34,10 +34,13 @@ function get_cfg_value() {
 create_ffu_env=''
 <% if @is_dpdk -%>
 type="dpdk"
+dpdk_ini='/etc/contrail.org/supervisord_vrouter_files/contrail-vrouter-dpdk.ini'
 bind_int=$(get_cfg_value physical_interface_address)
+if [[ "$bind_int" == '0000:00:00.0' ]] ; then
+  bind_int=$(sudo grep -o "slave=[^ \"\']\+" $dpdk_ini | awk '{print($NF)}' | cut -d '=' -f 2)
+fi
 [[ -n "$bind_int" ]] && create_ffu_env='true'
 dpdk_driver=$(get_cfg_value physical_uio_driver)
-dpdk_ini='/etc/contrail.org/supervisord_vrouter_files/contrail-vrouter-dpdk.ini'
 core_mask=$(sudo grep -o "command.*taskset[ ]*[^ ]\+ " $dpdk_ini | awk '{print($NF)}')
 vlan_id=$(sudo grep -o "vlan_tci[ ]*[^ ]\+[ ]*" $dpdk_ini | awk '{print($NF)}')
 bond_mode=''
@@ -45,10 +48,10 @@ bond_policy=''
 [ -e /sys/class/net/vhost0/bonding/mode ] && bond_mode=$(sudo cat /sys/class/net/vhost0/bonding/mode)
 [ -e /sys/class/net/vhost0/bonding/xmit_hash_policy ] && bond_policy=$(sudo cat /sys/class/net/vhost0/bonding/xmit_hash_policy)
 if [ -z "$bond_mode" ] ; then
-  bond_mode=$(grep -o "mode=[^, ]\+" $dpdk_ini | awk '{print($NF)}' | cut -d '=' -f 2)
+  bond_mode=$(sudo grep -o "mode=[^, ]\+" $dpdk_ini | awk '{print($NF)}' | cut -d '=' -f 2)
 fi
 if [ -z "$bond_policy" ] ; then
-  bond_policy=$(grep -o "xmit_policy=[^, ]\+" $dpdk_ini | awk '{print($NF)}' | cut -d '=' -f 2)
+  bond_policy=$(sudo grep -o "xmit_policy=[^, ]\+" $dpdk_ini | awk '{print($NF)}' | cut -d '=' -f 2)
 fi
 <% else %>
 type="kernel"
