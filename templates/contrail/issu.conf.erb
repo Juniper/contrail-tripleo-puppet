@@ -8,6 +8,7 @@ old_rabbit_q_name = vnc-config.issu-queue
 old_rabbit_vhost = /
 old_rabbit_port = 5673
 old_rabbit_address_list = <%= @old_rabbit_server_list_5673 %>
+old_rabbit_use_ssl = <%= @contrail_ssl_enabled %>
 
 old_cassandra_user = ''
 old_cassandra_password = ''
@@ -26,6 +27,7 @@ new_rabbit_q_name = vnc-config.issu-queue
 new_rabbit_vhost = /
 new_rabbit_port = 5673
 new_rabbit_address_list = <%= @issu_ips_list_comma %>
+new_rabbit_use_ssl = <%= @contrail_ssl_enabled %>
 
 new_cassandra_address_list = <%= @issu_cassandra_server_list_9161 %>
 
